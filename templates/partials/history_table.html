@@ -36,7 +36,7 @@
         </thead>
         <tbody>
             {% for op in operations %}
-            <tr class="operation-row {% if op.operation|lower in ['open', 'buy'] %}row-open{% elif op.operation|lower in ['close', 'sell'] %}row-close{% endif %}" style="background: white; color: #1e293b;">
+            <tr class="operation-row {% if op.operation|lower in ['open', 'buy'] %}row-open{% elif op.operation|lower in ['close', 'sell'] %}row-close{% endif %}">
                 <td class="time-col">
                     <div class="time-main">{{ op.created_at.strftime('%d/%m/%Y') }}</div>
                     <div class="time-sub">{{ op.created_at.strftime('%H:%M:%S') }}</div>
@@ -79,18 +79,18 @@
                     {% endif %}
                 </td>
                 <td class="pnl-col">
-                    {% set pnl = op.raw_payload.get('pnl') or op.raw_payload.get('profit_loss') or op.raw_payload.get('realized_pnl') %}
-                    {% if pnl is not none %}
-                    <div class="pnl-display {% if pnl >= 0 %}pnl-positive{% else %}pnl-negative{% endif %}">
+                    {% set pnl = op.raw_payload.get('pnl') or op.raw_payload.get('profit_loss') or op.raw_payload.get('realized_pnl') or op.raw_payload.get('pnl_usd') %}
+                    {% if pnl is not none and pnl != 0 %}
+                    <div class="pnl-display {% if pnl > 0 %}pnl-positive{% else %}pnl-negative{% endif %}">
                         <strong>{{ '{:+,.2f}'.format(pnl) }} $</strong>
-                        {% if pnl >= 0 %}
+                        {% if pnl > 0 %}
                         <span style="font-size: 1.2rem;">📈</span>
                         {% else %}
                         <span style="font-size: 1.2rem;">📉</span>
                         {% endif %}
                     </div>
                     {% elif op.operation|lower in ['close', 'sell'] %}
-                    <span class="text-muted" style="font-size: 0.85rem;">⏳ In attesa dati</span>
+                    <span class="pnl-pending">⏳ Calcolo in corso...</span>
                     {% else %}
                     <span class="text-muted">-</span>
                     {% endif %}
@@ -174,27 +174,39 @@
         border-bottom: none;
     }
 
+    .history-table tbody {
+        background: #ffffff !important;
+    }
+
+    .history-table tbody tr {
+        background: #ffffff !important;
+    }
+
     .history-table td {
         padding: 1rem;
         border-bottom: 1px solid #f1f5f9;
-        color: #1e293b;
+        color: #1e293b !important;
+        background-color: #ffffff !important;
         vertical-align: middle;
     }
 
     .operation-row {
         transition: background-color 0.2s;
+        background: #ffffff !important;
     }
 
     .operation-row:hover {
-        background-color: #f8fafc;
+        background-color: #f8fafc !important;
     }
 
     .row-open {
         border-left: 3px solid #10b981;
+        background: #ffffff !important;
     }
 
     .row-close {
         border-left: 3px solid #ef4444;
+        background: #ffffff !important;
     }
 
     .time-col {
@@ -319,7 +331,18 @@
     }
 
     .text-muted {
-        color: #94a3b8;
+        color: #94a3b8 !important;
+        background: #ffffff !important;
+    }
+
+    .pnl-pending {
+        color: #f59e0b !important;
+        font-size: 0.85rem;
+        font-weight: 500;
+        background: #fef3c7 !important;
+        padding: 0.4rem 0.7rem;
+        border-radius: 0.4rem;
+        display: inline-block;
     }
 
     @media (max-width: 1024px) {
