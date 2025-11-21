@@ -30,12 +30,13 @@
                 <th>Direzione</th>
                 <th>Leva</th>
                 <th>Target %</th>
+                <th>P&L (USD)</th>
                 <th>Motivazione</th>
             </tr>
         </thead>
         <tbody>
             {% for op in operations %}
-            <tr class="operation-row {% if op.operation|lower in ['open', 'buy'] %}row-open{% elif op.operation|lower in ['close', 'sell'] %}row-close{% endif %}">
+            <tr class="operation-row {% if op.operation|lower in ['open', 'buy'] %}row-open{% elif op.operation|lower in ['close', 'sell'] %}row-close{% endif %}" style="background: white; color: #1e293b;">
                 <td class="time-col">
                     <div class="time-main">{{ op.created_at.strftime('%d/%m/%Y') }}</div>
                     <div class="time-sub">{{ op.created_at.strftime('%H:%M:%S') }}</div>
@@ -73,6 +74,23 @@
                 <td class="target-col">
                     {% if op.target_portion_of_balance is not none %}
                     {{ '%.1f' | format(op.target_portion_of_balance * 100) }}%
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td class="pnl-col">
+                    {% set pnl = op.raw_payload.get('pnl') or op.raw_payload.get('profit_loss') or op.raw_payload.get('realized_pnl') %}
+                    {% if pnl is not none %}
+                    <div class="pnl-display {% if pnl >= 0 %}pnl-positive{% else %}pnl-negative{% endif %}">
+                        <strong>{{ '{:+,.2f}'.format(pnl) }} $</strong>
+                        {% if pnl >= 0 %}
+                        <span style="font-size: 1.2rem;">📈</span>
+                        {% else %}
+                        <span style="font-size: 1.2rem;">📉</span>
+                        {% endif %}
+                    </div>
+                    {% elif op.operation|lower in ['close', 'sell'] %}
+                    <span class="text-muted" style="font-size: 0.85rem;">⏳ In attesa dati</span>
                     {% else %}
                     <span class="text-muted">-</span>
                     {% endif %}
@@ -159,7 +177,7 @@
     .history-table td {
         padding: 1rem;
         border-bottom: 1px solid #f1f5f9;
-        color: #0f172a;
+        color: #1e293b;
         vertical-align: middle;
     }
 
@@ -185,7 +203,7 @@
 
     .time-main {
         font-weight: 600;
-        color: #0f172a;
+        color: #1e293b;
         font-size: 0.9rem;
     }
 
@@ -215,7 +233,7 @@
 
     .symbol-col strong {
         font-size: 0.95rem;
-        color: #0f172a;
+        color: #1e293b;
     }
 
     .direction-badge {
@@ -271,6 +289,33 @@
         color: #334155;
         white-space: pre-wrap;
         max-width: 500px;
+    }
+
+    .pnl-col {
+        min-width: 130px;
+    }
+
+    .pnl-display {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+        font-size: 0.95rem;
+        font-weight: 700;
+        justify-content: center;
+    }
+
+    .pnl-positive {
+        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+        color: #166534;
+        border: 2px solid #86efac;
+    }
+
+    .pnl-negative {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        color: #991b1b;
+        border: 2px solid #fca5a5;
     }
 
     .text-muted {

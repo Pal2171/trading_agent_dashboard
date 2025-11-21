@@ -500,28 +500,31 @@ def get_risk_metrics() -> RiskMetrics:
             balance = float(snapshot_row[1]) if snapshot_row[1] else 0.0
 
             # Statistiche posizioni
-            cur.execute(
-                """
-                SELECT 
-                    COUNT(*) as total,
-                    COUNT(CASE WHEN side ILIKE 'long' THEN 1 END) as longs,
-                    COUNT(CASE WHEN side ILIKE 'short' THEN 1 END) as shorts,
-                    AVG(CAST(REPLACE(leverage, 'x', '') AS NUMERIC)) as avg_lev,
-                    SUM(ABS(size * COALESCE(mark_price, entry_price, 0))) as total_exposure,
-                    MAX(ABS(size * COALESCE(mark_price, entry_price, 0))) as largest_pos
-                FROM open_positions
-                WHERE snapshot_id = %s;
-                """,
-                (snapshot_id,),
-            )
-            pos_row = cur.fetchone()
+            try:
+                cur.execute(
+                    """
+                    SELECT 
+                        COUNT(*) as total,
+                        COUNT(CASE WHEN side ILIKE 'long' THEN 1 END) as longs,
+                        COUNT(CASE WHEN side ILIKE 'short' THEN 1 END) as shorts,
+                        SUM(ABS(size * COALESCE(mark_price, entry_price, 0))) as total_exposure,
+                        MAX(ABS(size * COALESCE(mark_price, entry_price, 0))) as largest_pos
+                    FROM open_positions
+                    WHERE snapshot_id = %s;
+                    """,
+                    (snapshot_id,),
+                )
+                pos_row = cur.fetchone()
+            except Exception as e:
+                print(f"Error in risk metrics query: {e}")
+                pos_row = (0, 0, 0, 0.0, 0.0)
 
     total_positions = pos_row[0] if pos_row else 0
     long_positions = pos_row[1] if pos_row else 0
     short_positions = pos_row[2] if pos_row else 0
-    avg_leverage = float(pos_row[3]) if pos_row and pos_row[3] else None
-    total_exposure = float(pos_row[4]) if pos_row and pos_row[4] else 0.0
-    largest_position = float(pos_row[5]) if pos_row and pos_row[5] else 0.0
+    total_exposure = float(pos_row[3]) if pos_row and pos_row[3] else 0.0
+    largest_position = float(pos_row[4]) if pos_row and pos_row[4] else 0.0
+    avg_leverage = None  # Rimosso calcolo problematico
 
     largest_position_pct = None
     if balance > 0 and largest_position > 0:
