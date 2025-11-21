@@ -105,8 +105,16 @@
 <script>
 (function() {
   try {
-    const root = document.currentScript.closest('.history-wrapper');
+    const script = document.currentScript;
+    let root = script.previousElementSibling;
+    while (root && !root.classList.contains('history-wrapper')) {
+      root = root.previousElementSibling;
+    }
+    if (!root) return;
+
     const toggle = root.querySelector('#compactToggle');
+    if (!toggle) return;
+
     const key = 'historyCompactMode';
 
     function apply(state) {
@@ -127,7 +135,9 @@
       localStorage.setItem(key, on ? '1' : '0');
       apply(on);
     });
-  } catch (e) { /* ignore */ }
+  } catch (e) {
+    console.error('Compact toggle error:', e);
+  }
 })();
 </script>
 

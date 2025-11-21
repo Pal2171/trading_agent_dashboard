@@ -19,17 +19,6 @@
             </div>
             {% endif %}
         </div>
-
-        <div class="risk-card">
-            <div class="risk-label">Leva Media</div>
-            <div class="risk-value">
-                {% if metrics.avg_leverage is not none %}
-                {{ '{:.1f}'.format(metrics.avg_leverage) }}x
-                {% else %}
-                <span class="text-muted">N/A</span>
-                {% endif %}
-            </div>
-        </div>
     </div>
 
     <!-- Visual indicator per Long/Short balance -->
