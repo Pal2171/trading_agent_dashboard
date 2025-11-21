@@ -1,23 +1,27 @@
 {% if operations %}
-<!-- Summary Totals -->
-<div class="history-summary">
-    <div class="summary-card">
-        <div class="summary-label">Operazioni Totali</div>
-        <div class="summary-value">{{ operations | length }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">Aperture (Open/Buy)</div>
-        <div class="summary-value text-success">
-            {{ operations | selectattr('operation', 'in', ['open', 'buy', 'OPEN', 'BUY']) | list | length }}
+<!-- History Wrapper + Equity Bar with compact toggle -->
+<div class="history-wrapper">
+    <div class="equity-bar">
+        <div class="equity-left">
+            <span class="equity-label">Equity</span>
+            <span class="equity-value">
+                {% if equity is not none %}${{ '{:,.2f}'.format(equity) }}{% else %}N/D{% endif %}
+            </span>
+        </div>
+        <div class="equity-right">
+            <span class="equity-meta">Operazioni: {{ operations | length }}</span>
+            {% if equity_ts %}
+            <span class="equity-meta">Aggiornato: {{ equity_ts.strftime('%d/%m/%Y %H:%M') }}</span>
+            {% endif %}
+            <div class="view-toggle">
+                <label class="toggle">
+                    <input type="checkbox" id="compactToggle" />
+                    <span class="toggle-slider" aria-hidden="true"></span>
+                    <span class="toggle-label">Compatta</span>
+                </label>
+            </div>
         </div>
     </div>
-    <div class="summary-card">
-        <div class="summary-label">Chiusure (Close/Sell)</div>
-        <div class="summary-value text-danger">
-            {{ operations | selectattr('operation', 'in', ['close', 'sell', 'CLOSE', 'SELL']) | list | length }}
-        </div>
-    </div>
-</div>
 
 <!-- Operations Table -->
 <div class="history-table-container">
@@ -30,7 +34,6 @@
                 <th>Direzione</th>
                 <th>Leva</th>
                 <th>Target %</th>
-                <th>P&L (USD)</th>
                 <th>Motivazione</th>
             </tr>
         </thead>
@@ -78,23 +81,6 @@
                     <span class="text-muted">-</span>
                     {% endif %}
                 </td>
-                <td class="pnl-col">
-                    {% set pnl = op.raw_payload.get('pnl') or op.raw_payload.get('profit_loss') or op.raw_payload.get('realized_pnl') or op.raw_payload.get('pnl_usd') %}
-                    {% if pnl is not none and pnl != 0 %}
-                    <div class="pnl-display {% if pnl > 0 %}pnl-positive{% else %}pnl-negative{% endif %}">
-                        <strong>{{ '{:+,.2f}'.format(pnl) }} $</strong>
-                        {% if pnl > 0 %}
-                        <span style="font-size: 1.2rem;">📈</span>
-                        {% else %}
-                        <span style="font-size: 1.2rem;">📉</span>
-                        {% endif %}
-                    </div>
-                    {% elif op.operation|lower in ['close', 'sell'] %}
-                    <span class="pnl-pending">⏳ Calcolo in corso...</span>
-                    {% else %}
-                    <span class="text-muted">-</span>
-                    {% endif %}
-                </td>
                 <td class="motivation-col">
                     {% set reason = op.raw_payload.get('reason') or op.raw_payload.get('motivation') or op.raw_payload.get('comment') %}
                     {% if reason %}
@@ -114,98 +100,141 @@
     </table>
 </div>
 
+</div>
+
+<script>
+(function() {
+  try {
+    const root = document.currentScript.closest('.history-wrapper');
+    const toggle = root.querySelector('#compactToggle');
+    const key = 'historyCompactMode';
+
+    function apply(state) {
+      if (state) {
+        root.classList.add('compact-mode');
+        toggle.checked = true;
+      } else {
+        root.classList.remove('compact-mode');
+        toggle.checked = false;
+      }
+    }
+
+    const saved = localStorage.getItem(key);
+    apply(saved === '1');
+
+    toggle.addEventListener('change', () => {
+      const on = toggle.checked;
+      localStorage.setItem(key, on ? '1' : '0');
+      apply(on);
+    });
+  } catch (e) { /* ignore */ }
+})();
+</script>
+
 <style>
-    .history-summary {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    /* Toggle styles */
+    .toggle { display: inline-flex; align-items: center; gap: .5rem; cursor: pointer; user-select: none; }
+    .toggle input { display: none; }
+    .toggle-slider { width: 38px; height: 22px; background: #e2e8f0; border-radius: 9999px; position: relative; transition: all .2s; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04); }
+    .toggle-slider::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: #fff; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.12); transition: transform .2s ease; }
+    .toggle input:checked + .toggle-slider { background: #0ea5e9; }
+    .toggle input:checked + .toggle-slider::after { transform: translateX(16px); }
+    .toggle-label { color: #334155; font-size: .8rem; font-weight: 600; }
+
+    /* Compact mode adjustments */
+    .history-wrapper.compact-mode .history-table { border-spacing: 0 6px; font-size: 0.8rem; }
+    .history-wrapper.compact-mode .history-table th { padding: 0.5rem 0.65rem; font-size: 0.65rem; }
+    .history-wrapper.compact-mode .history-table td { padding: 0.5rem 0.65rem; }
+    .history-wrapper.compact-mode .time-sub { display: none; }
+    .history-wrapper.compact-mode .operation-badge,
+    .history-wrapper.compact-mode .direction-badge,
+    .history-wrapper.compact-mode .leverage-badge { padding: 0.2rem 0.5rem; font-size: 0.75rem; }
+    .history-wrapper.compact-mode .motivation-summary { font-size: 0.8rem; padding: 0.35rem 0.55rem; }
+
+    .equity-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .summary-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        border: 1px solid #e2e8f0;
         border-radius: 0.75rem;
-        padding: 1.25rem;
-        text-align: center;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        padding: 0.75rem 1rem;
+        background: #ffffff;
+        margin-bottom: 1rem;
     }
-
-    .summary-label {
-        font-size: 0.8rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        opacity: 0.9;
-        margin-bottom: 0.5rem;
-    }
-
-    .summary-value {
-        font-size: 2rem;
-        font-weight: 700;
-    }
+    .equity-left { display: flex; align-items: baseline; gap: 0.5rem; }
+    .equity-label { color: #64748b; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .equity-value { color: #0f172a; font-weight: 700; font-size: 1.1rem; }
+    .equity-right { display: flex; gap: .75rem; flex-wrap: wrap; }
+    .equity-meta { color: #475569; font-size: 0.8rem; }
 
     .history-table-container {
         overflow-x: auto;
         border-radius: 0.75rem;
-        border: 1px solid #e2e8f0;
-        background: white;
+        background: transparent;
     }
 
     .history-table {
         width: 100%;
-        border-collapse: collapse;
-        font-size: 0.9rem;
+        border-collapse: separate;
+        border-spacing: 0 10px;
+        font-size: 0.875rem;
         margin-bottom: 0;
     }
 
     .history-table thead {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: #f8fafc;
+        color: #0f172a;
     }
 
     .history-table th {
-        padding: 1rem;
+        padding: 0.75rem 1rem;
         text-align: left;
         font-weight: 600;
         text-transform: uppercase;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         letter-spacing: 0.05em;
-        border-bottom: none;
+        border-bottom: 1px solid #e2e8f0;
     }
 
     .history-table tbody {
-        background: #ffffff !important;
+        background: transparent !important;
     }
 
     .history-table tbody tr {
         background: #ffffff !important;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03);
     }
 
     .history-table td {
-        padding: 1rem;
-        border-bottom: 1px solid #f1f5f9;
+        padding: 0.85rem 1rem;
+        border-bottom: none;
         color: #1e293b !important;
         background-color: #ffffff !important;
         vertical-align: middle;
     }
 
+    .history-table tbody tr td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+    .history-table tbody tr td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+
     .operation-row {
-        transition: background-color 0.2s;
+        transition: box-shadow 0.2s, transform 0.05s;
         background: #ffffff !important;
     }
 
     .operation-row:hover {
-        background-color: #f8fafc !important;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
     }
 
     .row-open {
-        border-left: 3px solid #10b981;
+        border-left: 4px solid #10b981;
         background: #ffffff !important;
     }
 
     .row-close {
-        border-left: 3px solid #ef4444;
+        border-left: 4px solid #ef4444;
         background: #ffffff !important;
     }
 
@@ -215,53 +244,58 @@
 
     .time-main {
         font-weight: 600;
-        color: #1e293b;
-        font-size: 0.9rem;
+        color: #0f172a;
+        font-size: 0.85rem;
     }
 
     .time-sub {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         color: #64748b;
         margin-top: 0.15rem;
     }
 
     .operation-badge {
         display: inline-block;
-        padding: 0.4rem 0.8rem;
-        border-radius: 0.5rem;
+        padding: 0.3rem 0.6rem;
+        border-radius: 9999px;
         font-weight: 600;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+        background: #fff;
     }
 
     .badge-open {
-        background: #dcfce7;
-        color: #166534;
+        color: #0f766e;
     }
 
     .badge-close {
-        background: #fee2e2;
-        color: #991b1b;
+        color: #b91c1c;
     }
 
     .symbol-col strong {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         color: #1e293b;
     }
 
     .direction-badge {
         display: inline-block;
-        padding: 0.3rem 0.7rem;
+        padding: 0.25rem 0.6rem;
         border-radius: 9999px;
         font-weight: 600;
         font-size: 0.8rem;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+        background: #fff;
     }
 
     .leverage-badge {
         display: inline-block;
-        background: #eff6ff;
-        color: #1e40af;
-        padding: 0.3rem 0.6rem;
+        background: #fff;
+        color: #334155;
+        padding: 0.25rem 0.55rem;
         border-radius: 0.375rem;
+        border: 1px solid #e2e8f0;
         font-weight: 600;
         font-size: 0.8rem;
     }
@@ -271,19 +305,20 @@
     }
 
     .motivation-summary {
-        color: #3b82f6;
+        color: #0f172a;
         font-weight: 500;
         font-size: 0.85rem;
         cursor: pointer;
         list-style: none;
-        padding: 0.5rem 0.75rem;
-        background: #eff6ff;
+        padding: 0.45rem 0.7rem;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 0.5rem;
         transition: all 0.2s;
     }
 
     .motivation-summary:hover {
-        background: #dbeafe;
+        background: #f8fafc;
     }
 
     .motivation-summary::-webkit-details-marker {
@@ -294,7 +329,7 @@
         margin-top: 0.75rem;
         padding: 1rem;
         background: #f8fafc;
-        border-left: 3px solid #3b82f6;
+        border-left: 3px solid #94a3b8;
         border-radius: 0.5rem;
         font-size: 0.85rem;
         line-height: 1.6;
@@ -303,46 +338,9 @@
         max-width: 500px;
     }
 
-    .pnl-col {
-        min-width: 130px;
-    }
-
-    .pnl-display {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 0.75rem;
-        border-radius: 0.5rem;
-        font-size: 0.95rem;
-        font-weight: 700;
-        justify-content: center;
-    }
-
-    .pnl-positive {
-        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-        color: #166534;
-        border: 2px solid #86efac;
-    }
-
-    .pnl-negative {
-        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-        color: #991b1b;
-        border: 2px solid #fca5a5;
-    }
-
     .text-muted {
         color: #94a3b8 !important;
         background: #ffffff !important;
-    }
-
-    .pnl-pending {
-        color: #f59e0b !important;
-        font-size: 0.85rem;
-        font-weight: 500;
-        background: #fef3c7 !important;
-        padding: 0.4rem 0.7rem;
-        border-radius: 0.4rem;
-        display: inline-block;
     }
 
     @media (max-width: 1024px) {
@@ -352,7 +350,7 @@
 
         .history-table th,
         .history-table td {
-            padding: 0.75rem 0.5rem;
+            padding: 0.6rem 0.5rem;
         }
     }
 </style>

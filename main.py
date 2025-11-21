@@ -597,9 +597,33 @@ async def history_page(request: Request) -> HTMLResponse:
 async def ui_history(request: Request) -> HTMLResponse:
     """Partial HTML per la tabella storico."""
     operations = get_history(limit=100)
+
+    # Recupera equity corrente (ultimo balance registrato)
+    current_equity: Optional[float] = None
+    equity_timestamp: Optional[datetime] = None
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT balance_usd, created_at
+                FROM account_snapshots
+                ORDER BY created_at DESC
+                LIMIT 1;
+                """
+            )
+            row = cur.fetchone()
+            if row:
+                current_equity = float(row[0]) if row[0] is not None else None
+                equity_timestamp = row[1]
+
     return templates.TemplateResponse(
         "partials/history_table.html",
-        {"request": request, "operations": operations},
+        {
+            "request": request,
+            "operations": operations,
+            "equity": current_equity,
+            "equity_ts": equity_timestamp,
+        },
     )
 
 
