@@ -410,31 +410,57 @@ def get_performance_metrics() -> PerformanceMetrics:
 
 
 @app.get("/current-indicators", response_model=CurrentIndicators)
-def get_current_indicators() -> CurrentIndicators:
-    """Restituisce gli ultimi indicatori tecnici disponibili."""
+def get_current_indicators(
+    ticker: Optional[str] = Query(None, description="Filtra per ticker specifico")
+) -> CurrentIndicators:
+    """Restituisce gli ultimi indicatori tecnici disponibili, opzionalmente filtrati per ticker."""
 
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT 
-                    ticker,
-                    ts,
-                    price,
-                    ema9,
-                    ema20,
-                    ema21,
-                    supertrend,
-                    adx,
-                    macd,
-                    rsi_7,
-                    rsi_14,
-                    candlestick_patterns
-                FROM indicators_contexts
-                ORDER BY ts DESC
-                LIMIT 1;
-                """
-            )
+            if ticker:
+                cur.execute(
+                    """
+                    SELECT 
+                        ticker,
+                        ts,
+                        price,
+                        ema9,
+                        ema20,
+                        ema21,
+                        supertrend,
+                        adx,
+                        macd,
+                        rsi_7,
+                        rsi_14,
+                        candlestick_patterns
+                    FROM indicators_contexts
+                    WHERE ticker = %s
+                    ORDER BY ts DESC
+                    LIMIT 1;
+                    """,
+                    (ticker,),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT 
+                        ticker,
+                        ts,
+                        price,
+                        ema9,
+                        ema20,
+                        ema21,
+                        supertrend,
+                        adx,
+                        macd,
+                        rsi_7,
+                        rsi_14,
+                        candlestick_patterns
+                    FROM indicators_contexts
+                    ORDER BY ts DESC
+                    LIMIT 1;
+                    """
+                )
             row = cur.fetchone()
 
     if not row:
@@ -638,12 +664,35 @@ async def ui_performance_metrics(request: Request) -> HTMLResponse:
 
 
 @app.get("/ui/current-indicators", response_class=HTMLResponse)
-async def ui_current_indicators(request: Request) -> HTMLResponse:
+async def ui_current_indicators(
+    request: Request,
+    ticker: Optional[str] = Query(None, description="Filtra per ticker")
+) -> HTMLResponse:
     """Partial HTML per gli indicatori correnti."""
-    indicators = get_current_indicators()
+    indicators = get_current_indicators(ticker=ticker)
+    
+    # Recupera lista ticker disponibili per il dropdown
+    available_tickers: List[str] = []
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT DISTINCT ticker 
+                FROM indicators_contexts 
+                WHERE ticker IS NOT NULL
+                ORDER BY ticker;
+                """
+            )
+            available_tickers = [row[0] for row in cur.fetchall()]
+    
     return templates.TemplateResponse(
         "partials/current_indicators.html",
-        {"request": request, "indicators": indicators},
+        {
+            "request": request,
+            "indicators": indicators,
+            "available_tickers": available_tickers,
+            "selected_ticker": ticker,
+        },
     )
 
 

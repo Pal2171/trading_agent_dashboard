@@ -1,14 +1,28 @@
 <div class="indicators-container">
     {% if indicators.timestamp %}
     <div class="indicators-header">
-        <div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
             <strong style="font-size: 1.1rem;">
                 {% if indicators.ticker %}{{ indicators.ticker }}{% else %}N/A{% endif %}
             </strong>
             {% if indicators.price %}
-            <span style="font-size: 1.5rem; font-weight: 700; margin-left: 0.75rem; color: #0f172a;">
+            <span style="font-size: 1.5rem; font-weight: 700; color: #0f172a;">
                 ${{ '{:,.2f}'.format(indicators.price) }}
             </span>
+            {% endif %}
+            {% if available_tickers and available_tickers|length > 1 %}
+            <select 
+                id="tickerSelector" 
+                class="ticker-selector"
+                hx-get="/ui/current-indicators" 
+                hx-target="#indicators-card"
+                hx-include="this"
+                name="ticker">
+                <option value="">Tutti</option>
+                {% for t in available_tickers %}
+                <option value="{{ t }}" {% if selected_ticker == t %}selected{% endif %}>{{ t }}</option>
+                {% endfor %}
+            </select>
             {% endif %}
         </div>
         <div class="text-muted" style="font-size: 0.85rem;">
@@ -273,5 +287,28 @@
     .pattern-desc {
         color: #64748b;
         flex: 1;
+    }
+
+    .ticker-selector {
+        padding: 0.4rem 0.75rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .ticker-selector:hover {
+        border-color: #cbd5e1;
+        background: #f8fafc;
+    }
+
+    .ticker-selector:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
 </style>
