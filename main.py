@@ -74,6 +74,43 @@ class BotOperation(BaseModel):
     system_prompt: Optional[str]
 
 
+class PerformanceMetrics(BaseModel):
+    total_operations: int
+    buy_operations: int
+    sell_operations: int
+    hold_operations: int
+    current_balance: Optional[float]
+    initial_balance: Optional[float]
+    total_return_pct: Optional[float]
+    total_return_usd: Optional[float]
+    peak_balance: Optional[float]
+    max_drawdown_pct: Optional[float]
+
+
+class CurrentIndicators(BaseModel):
+    ticker: Optional[str]
+    timestamp: Optional[datetime]
+    price: Optional[float]
+    ema9: Optional[float]
+    ema20: Optional[float]
+    ema21: Optional[float]
+    supertrend: Optional[str]
+    adx: Optional[float]
+    macd: Optional[float]
+    rsi_7: Optional[float]
+    rsi_14: Optional[float]
+    candlestick_patterns: Any
+
+
+class RiskMetrics(BaseModel):
+    total_exposure_usd: float
+    total_positions: int
+    long_positions: int
+    short_positions: int
+    avg_leverage: Optional[float]
+    largest_position_pct: Optional[float]
+
+
 # =====================
 # App FastAPI + Template Jinja2
 # =====================
@@ -294,6 +331,212 @@ def get_history(
     return operations
 
 
+@app.get("/performance-metrics", response_model=PerformanceMetrics)
+def get_performance_metrics() -> PerformanceMetrics:
+    """Restituisce metriche di performance del trading bot."""
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            # Conta operazioni per tipo
+            cur.execute(
+                """
+                SELECT 
+                    COUNT(*) as total,
+                    COUNT(CASE WHEN operation ILIKE 'buy' OR operation ILIKE 'open' THEN 1 END) as buys,
+                    COUNT(CASE WHEN operation ILIKE 'sell' OR operation ILIKE 'close' THEN 1 END) as sells,
+                    COUNT(CASE WHEN operation ILIKE 'hold' THEN 1 END) as holds
+                FROM bot_operations;
+                """
+            )
+            ops = cur.fetchone()
+
+            # Balance attuale e iniziale
+            cur.execute(
+                """
+                SELECT balance_usd 
+                FROM account_snapshots 
+                ORDER BY created_at ASC 
+                LIMIT 1;
+                """
+            )
+            initial_row = cur.fetchone()
+            initial_balance = float(initial_row[0]) if initial_row else None
+
+            cur.execute(
+                """
+                SELECT balance_usd 
+                FROM account_snapshots 
+                ORDER BY created_at DESC 
+                LIMIT 1;
+                """
+            )
+            current_row = cur.fetchone()
+            current_balance = float(current_row[0]) if current_row else None
+
+            # Peak balance per calcolare drawdown
+            cur.execute(
+                """
+                SELECT MAX(balance_usd) 
+                FROM account_snapshots;
+                """
+            )
+            peak_row = cur.fetchone()
+            peak_balance = float(peak_row[0]) if peak_row and peak_row[0] else None
+
+    # Calcola metriche derivate
+    total_return_pct = None
+    total_return_usd = None
+    max_drawdown_pct = None
+
+    if initial_balance and current_balance:
+        total_return_usd = current_balance - initial_balance
+        total_return_pct = (total_return_usd / initial_balance) * 100
+
+    if peak_balance and current_balance:
+        max_drawdown_pct = ((peak_balance - current_balance) / peak_balance) * 100
+
+    return PerformanceMetrics(
+        total_operations=ops[0] if ops else 0,
+        buy_operations=ops[1] if ops else 0,
+        sell_operations=ops[2] if ops else 0,
+        hold_operations=ops[3] if ops else 0,
+        current_balance=current_balance,
+        initial_balance=initial_balance,
+        total_return_pct=total_return_pct,
+        total_return_usd=total_return_usd,
+        peak_balance=peak_balance,
+        max_drawdown_pct=max_drawdown_pct,
+    )
+
+
+@app.get("/current-indicators", response_model=CurrentIndicators)
+def get_current_indicators() -> CurrentIndicators:
+    """Restituisce gli ultimi indicatori tecnici disponibili."""
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT 
+                    ticker,
+                    ts,
+                    price,
+                    ema9,
+                    ema20,
+                    ema21,
+                    supertrend,
+                    adx,
+                    macd,
+                    rsi_7,
+                    rsi_14,
+                    candlestick_patterns
+                FROM indicators_contexts
+                ORDER BY ts DESC
+                LIMIT 1;
+                """
+            )
+            row = cur.fetchone()
+
+    if not row:
+        return CurrentIndicators(
+            ticker=None,
+            timestamp=None,
+            price=None,
+            ema9=None,
+            ema20=None,
+            ema21=None,
+            supertrend=None,
+            adx=None,
+            macd=None,
+            rsi_7=None,
+            rsi_14=None,
+            candlestick_patterns=None,
+        )
+
+    return CurrentIndicators(
+        ticker=row[0],
+        timestamp=row[1],
+        price=float(row[2]) if row[2] else None,
+        ema9=float(row[3]) if row[3] else None,
+        ema20=float(row[4]) if row[4] else None,
+        ema21=float(row[5]) if row[5] else None,
+        supertrend=row[6],
+        adx=float(row[7]) if row[7] else None,
+        macd=float(row[8]) if row[8] else None,
+        rsi_7=float(row[9]) if row[9] else None,
+        rsi_14=float(row[10]) if row[10] else None,
+        candlestick_patterns=row[11],
+    )
+
+
+@app.get("/risk-metrics", response_model=RiskMetrics)
+def get_risk_metrics() -> RiskMetrics:
+    """Restituisce metriche di rischio basate sulle posizioni aperte."""
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            # Ultimo snapshot
+            cur.execute(
+                """
+                SELECT id, balance_usd
+                FROM account_snapshots
+                ORDER BY created_at DESC
+                LIMIT 1;
+                """
+            )
+            snapshot_row = cur.fetchone()
+            
+            if not snapshot_row:
+                return RiskMetrics(
+                    total_exposure_usd=0.0,
+                    total_positions=0,
+                    long_positions=0,
+                    short_positions=0,
+                    avg_leverage=None,
+                    largest_position_pct=None,
+                )
+
+            snapshot_id = snapshot_row[0]
+            balance = float(snapshot_row[1]) if snapshot_row[1] else 0.0
+
+            # Statistiche posizioni
+            cur.execute(
+                """
+                SELECT 
+                    COUNT(*) as total,
+                    COUNT(CASE WHEN side ILIKE 'long' THEN 1 END) as longs,
+                    COUNT(CASE WHEN side ILIKE 'short' THEN 1 END) as shorts,
+                    AVG(CAST(REPLACE(leverage, 'x', '') AS NUMERIC)) as avg_lev,
+                    SUM(ABS(size * COALESCE(mark_price, entry_price, 0))) as total_exposure,
+                    MAX(ABS(size * COALESCE(mark_price, entry_price, 0))) as largest_pos
+                FROM open_positions
+                WHERE snapshot_id = %s;
+                """,
+                (snapshot_id,),
+            )
+            pos_row = cur.fetchone()
+
+    total_positions = pos_row[0] if pos_row else 0
+    long_positions = pos_row[1] if pos_row else 0
+    short_positions = pos_row[2] if pos_row else 0
+    avg_leverage = float(pos_row[3]) if pos_row and pos_row[3] else None
+    total_exposure = float(pos_row[4]) if pos_row and pos_row[4] else 0.0
+    largest_position = float(pos_row[5]) if pos_row and pos_row[5] else 0.0
+
+    largest_position_pct = None
+    if balance > 0 and largest_position > 0:
+        largest_position_pct = (largest_position / balance) * 100
+
+    return RiskMetrics(
+        total_exposure_usd=total_exposure,
+        total_positions=total_positions,
+        long_positions=long_positions,
+        short_positions=short_positions,
+        avg_leverage=avg_leverage,
+        largest_position_pct=largest_position_pct,
+    )
+
+
 # =====================
 # Endpoint HTML + HTMX
 # =====================
@@ -354,6 +597,36 @@ async def ui_history(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         "partials/history_table.html",
         {"request": request, "operations": operations},
+    )
+
+
+@app.get("/ui/performance-metrics", response_class=HTMLResponse)
+async def ui_performance_metrics(request: Request) -> HTMLResponse:
+    """Partial HTML per le metriche di performance."""
+    metrics = get_performance_metrics()
+    return templates.TemplateResponse(
+        "partials/performance_metrics.html",
+        {"request": request, "metrics": metrics},
+    )
+
+
+@app.get("/ui/current-indicators", response_class=HTMLResponse)
+async def ui_current_indicators(request: Request) -> HTMLResponse:
+    """Partial HTML per gli indicatori correnti."""
+    indicators = get_current_indicators()
+    return templates.TemplateResponse(
+        "partials/current_indicators.html",
+        {"request": request, "indicators": indicators},
+    )
+
+
+@app.get("/ui/risk-metrics", response_class=HTMLResponse)
+async def ui_risk_metrics(request: Request) -> HTMLResponse:
+    """Partial HTML per le metriche di rischio."""
+    metrics = get_risk_metrics()
+    return templates.TemplateResponse(
+        "partials/risk_metrics.html",
+        {"request": request, "metrics": metrics},
     )
 
 

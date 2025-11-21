@@ -1,0 +1,277 @@
+<div class="indicators-container">
+    {% if indicators.timestamp %}
+    <div class="indicators-header">
+        <div>
+            <strong style="font-size: 1.1rem;">
+                {% if indicators.ticker %}{{ indicators.ticker }}{% else %}N/A{% endif %}
+            </strong>
+            {% if indicators.price %}
+            <span style="font-size: 1.5rem; font-weight: 700; margin-left: 0.75rem; color: #0f172a;">
+                ${{ '{:,.2f}'.format(indicators.price) }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="text-muted" style="font-size: 0.85rem;">
+            Aggiornato: {{ indicators.timestamp.strftime('%d/%m/%Y %H:%M:%S') }}
+        </div>
+    </div>
+
+    <div class="indicators-grid">
+        <!-- Supertrend -->
+        <div class="indicator-item">
+            <div class="indicator-label">Supertrend</div>
+            <div class="indicator-value">
+                {% if indicators.supertrend %}
+                <span class="badge-supertrend {% if indicators.supertrend == 'BULLISH' %}badge-bullish{% else %}badge-bearish{% endif %}">
+                    {% if indicators.supertrend == 'BULLISH' %}🟢{% else %}🔴{% endif %} {{ indicators.supertrend }}
+                </span>
+                {% else %}
+                <span class="text-muted">N/A</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ADX -->
+        <div class="indicator-item">
+            <div class="indicator-label">ADX (Forza Trend)</div>
+            <div class="indicator-value">
+                {% if indicators.adx is not none %}
+                <strong>{{ '{:.1f}'.format(indicators.adx) }}</strong>
+                {% if indicators.adx > 25 %}
+                <span style="color: #16a34a; font-size: 0.85rem;">🔥 Forte</span>
+                {% elif indicators.adx > 15 %}
+                <span style="color: #eab308; font-size: 0.85rem;">⚠️ Moderato</span>
+                {% else %}
+                <span style="color: #94a3b8; font-size: 0.85rem;">Debole</span>
+                {% endif %}
+                {% else %}
+                <span class="text-muted">N/A</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- EMA 9 -->
+        <div class="indicator-item">
+            <div class="indicator-label">EMA 9</div>
+            <div class="indicator-value">
+                {% if indicators.ema9 is not none %}
+                ${{ '{:,.2f}'.format(indicators.ema9) }}
+                {% else %}
+                <span class="text-muted">N/A</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- EMA 20 -->
+        <div class="indicator-item">
+            <div class="indicator-label">EMA 20</div>
+            <div class="indicator-value">
+                {% if indicators.ema20 is not none %}
+                ${{ '{:,.2f}'.format(indicators.ema20) }}
+                {% else %}
+                <span class="text-muted">N/A</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- EMA 21 -->
+        <div class="indicator-item">
+            <div class="indicator-label">EMA 21</div>
+            <div class="indicator-value">
+                {% if indicators.ema21 is not none %}
+                ${{ '{:,.2f}'.format(indicators.ema21) }}
+                {% else %}
+                <span class="text-muted">N/A</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- RSI 7 -->
+        <div class="indicator-item">
+            <div class="indicator-label">RSI-7</div>
+            <div class="indicator-value">
+                {% if indicators.rsi_7 is not none %}
+                <strong {% if indicators.rsi_7 > 70 %}class="text-danger"{% elif indicators.rsi_7 < 30 %}class="text-success"{% endif %}>
+                    {{ '{:.1f}'.format(indicators.rsi_7) }}
+                </strong>
+                {% else %}
+                <span class="text-muted">N/A</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- RSI 14 -->
+        <div class="indicator-item">
+            <div class="indicator-label">RSI-14</div>
+            <div class="indicator-value">
+                {% if indicators.rsi_14 is not none %}
+                <strong {% if indicators.rsi_14 > 70 %}class="text-danger"{% elif indicators.rsi_14 < 30 %}class="text-success"{% endif %}>
+                    {{ '{:.1f}'.format(indicators.rsi_14) }}
+                </strong>
+                {% else %}
+                <span class="text-muted">N/A</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- MACD -->
+        <div class="indicator-item">
+            <div class="indicator-label">MACD</div>
+            <div class="indicator-value">
+                {% if indicators.macd is not none %}
+                <strong {% if indicators.macd > 0 %}class="text-success"{% elif indicators.macd < 0 %}class="text-danger"{% endif %}>
+                    {{ '{:.2f}'.format(indicators.macd) }}
+                </strong>
+                {% else %}
+                <span class="text-muted">N/A</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Candlestick Patterns -->
+    {% if indicators.candlestick_patterns and indicators.candlestick_patterns.patterns %}
+    <div class="patterns-section">
+        <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem; color: #0f172a;">
+            📊 Candlestick Patterns
+        </h4>
+        <div class="patterns-interpretation">
+            <strong>{{ indicators.candlestick_patterns.interpretation }}</strong>
+        </div>
+        <div class="patterns-list">
+            {% for pattern in indicators.candlestick_patterns.patterns %}
+            <div class="pattern-item">
+                <span class="pattern-badge badge-{{ pattern.signal }}">
+                    {{ pattern.name }}
+                </span>
+                <span class="pattern-desc">{{ pattern.description }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div style="text-align: center; padding: 2rem; color: #64748b;">
+        <p>Nessun dato indicatore disponibile.</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .indicators-container {
+        background: #ffffff;
+    }
+
+    .indicators-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .indicators-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .indicator-item {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+    }
+
+    .indicator-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.4rem;
+    }
+
+    .indicator-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    .badge-supertrend {
+        display: inline-block;
+        padding: 0.35rem 0.85rem;
+        border-radius: 9999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .badge-bullish {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-bearish {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .patterns-section {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+
+    .patterns-interpretation {
+        margin-bottom: 0.75rem;
+        color: #0f172a;
+        font-size: 0.95rem;
+    }
+
+    .patterns-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .pattern-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.85rem;
+    }
+
+    .pattern-badge {
+        display: inline-block;
+        padding: 0.25rem 0.6rem;
+        border-radius: 0.375rem;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+
+    .pattern-badge.badge-bullish {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .pattern-badge.badge-bearish {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .pattern-badge.badge-neutral {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .pattern-desc {
+        color: #64748b;
+        flex: 1;
+    }
+</style>

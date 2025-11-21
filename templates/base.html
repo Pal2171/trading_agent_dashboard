@@ -187,6 +187,42 @@
             color: var(--accent);
         }
 
+        /* Loading states */
+        [aria-busy="true"] {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Auto-refresh indicator */
+        .auto-refresh-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            padding: 0.25rem 0.75rem;
+            background: #f8fafc;
+            border-radius: 9999px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .pulse-dot {
+            width: 6px;
+            height: 6px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
         @media (max-width: 768px) {
             .navbar { padding: 0.75rem 1rem; }
             main.container { padding: 0 1rem; margin: 1.5rem auto; }
@@ -202,9 +238,17 @@
             <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">Dashboard</a>
             <a href="/history-page" class="nav-link {% if request.url.path == '/history-page' %}active{% endif %}">Storico</a>
         </div>
-        <button class="refresh-btn" onclick="window.location.reload()">
-            🔄 Aggiorna
-        </button>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            {% if request.url.path == '/' %}
+            <div class="auto-refresh-indicator">
+                <span class="pulse-dot"></span>
+                <span>Auto-refresh attivo</span>
+            </div>
+            {% endif %}
+            <button class="refresh-btn" onclick="window.location.reload()">
+                🔄 Aggiorna
+            </button>
+        </div>
     </nav>
 
     <main class="container">

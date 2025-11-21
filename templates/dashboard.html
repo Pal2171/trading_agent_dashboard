@@ -5,31 +5,73 @@
 {% block content %}
 <div style="display: flex; flex-direction: column; gap: 1.5rem;">
 
-    <!-- 1. Equity Curve -->
+    <!-- 1. Performance Metrics -->
     <article class="card">
-        <div class="flex-between" style="margin-bottom: 1rem;">
-            <div>
-                <h2>Equity Curve</h2>
-                <p class="card-subtitle">Andamento del valore del portafoglio nel tempo.</p>
-            </div>
+        <div style="margin-bottom: 1rem;">
+            <h2>📊 Performance Overview</h2>
+            <p class="card-subtitle">Metriche chiave delle performance del trading bot.</p>
         </div>
-        <div id="balance-panel" hx-get="/ui/balance" hx-trigger="load">
+        <div id="performance-metrics-panel" hx-get="/ui/performance-metrics" hx-trigger="load, every 30s">
+            <div aria-busy="true">Caricamento metriche...</div>
+        </div>
+    </article>
+
+    <!-- 2. Equity Curve -->
+    <article class="card">
+        <div style="margin-bottom: 1rem;">
+            <h2>💹 Equity Curve</h2>
+            <p class="card-subtitle">Andamento del valore del portafoglio nel tempo.</p>
+        </div>
+        <div id="balance-panel" hx-get="/ui/balance" hx-trigger="load, every 60s">
             <div aria-busy="true">Caricamento grafico...</div>
         </div>
     </article>
 
-    <!-- 2. Open Positions Table -->
+    <!-- 3. Current Market Indicators & Risk Metrics Grid -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+        <!-- Current Indicators -->
+        <article class="card">
+            <div style="margin-bottom: 1rem;">
+                <h2>📈 Indicatori di Mercato</h2>
+                <p class="card-subtitle">Ultimi indicatori tecnici disponibili.</p>
+            </div>
+            <div id="current-indicators-panel" hx-get="/ui/current-indicators" hx-trigger="load, every 30s">
+                <div aria-busy="true">Caricamento indicatori...</div>
+            </div>
+        </article>
+
+        <!-- Risk Metrics -->
+        <article class="card">
+            <div style="margin-bottom: 1rem;">
+                <h2>⚠️ Gestione del Rischio</h2>
+                <p class="card-subtitle">Metriche di esposizione e bilanciamento posizioni.</p>
+            </div>
+            <div id="risk-metrics-panel" hx-get="/ui/risk-metrics" hx-trigger="load, every 30s">
+                <div aria-busy="true">Caricamento metriche rischio...</div>
+            </div>
+        </article>
+    </div>
+
+    <!-- 4. Open Positions Table -->
     <article class="card">
         <div class="flex-between" style="margin-bottom: 1rem;">
             <div>
-                <h2>Posizioni Aperte</h2>
+                <h2>🎯 Posizioni Aperte</h2>
                 <p class="card-subtitle">Panoramica delle posizioni attualmente attive a mercato.</p>
             </div>
         </div>
-        <div id="open-positions-row" hx-get="/ui/open-positions" hx-trigger="load">
+        <div id="open-positions-row" hx-get="/ui/open-positions" hx-trigger="load, every 30s">
             <div aria-busy="true">Caricamento posizioni...</div>
         </div>
     </article>
 
 </div>
+
+<style>
+    @media (max-width: 968px) {
+        div[style*="grid-template-columns: 1fr 1fr"] {
+            grid-template-columns: 1fr !important;
+        }
+    }
+</style>
 {% endblock %}

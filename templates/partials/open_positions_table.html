@@ -1,4 +1,28 @@
 {% if positions %}
+<!-- Summary Stats -->
+<div class="positions-summary">
+    {% set total_pnl = positions | selectattr('pnl_usd', 'ne', None) | map(attribute='pnl_usd') | sum %}
+    {% set long_count = positions | selectattr('side', 'eq', 'long') | list | length %}
+    {% set short_count = positions | selectattr('side', 'eq', 'short') | list | length %}
+    
+    <div class="summary-item">
+        <span class="summary-label">Totale Posizioni</span>
+        <span class="summary-value">{{ positions | length }}</span>
+    </div>
+    <div class="summary-item">
+        <span class="summary-label">Long / Short</span>
+        <span class="summary-value">
+            <span class="text-success">{{ long_count }}</span> / <span class="text-danger">{{ short_count }}</span>
+        </span>
+    </div>
+    <div class="summary-item">
+        <span class="summary-label">P&L Totale</span>
+        <span class="summary-value {% if total_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {{ '{:+,.2f}'.format(total_pnl) }} $
+        </span>
+    </div>
+</div>
+
 <div class="table-container">
     <table>
         <thead>
@@ -8,46 +32,109 @@
                 <th>Size</th>
                 <th>Entry Price</th>
                 <th>Mark Price</th>
+                <th>Variazione %</th>
                 <th>Leva</th>
                 <th>PnL (USD)</th>
-                <th>Snapshot</th>
+                <th>Aggiornato</th>
             </tr>
         </thead>
         <tbody>
             {% for pos in positions %}
+            {% set price_change_pct = ((pos.mark_price - pos.entry_price) / pos.entry_price * 100) if (pos.mark_price and pos.entry_price and pos.entry_price > 0) else None %}
             <tr>
-                <td><strong>{{ pos.symbol }}</strong></td>
+                <td><strong style="font-size: 0.95rem;">{{ pos.symbol }}</strong></td>
                 <td>
                     {% if pos.side %}
-                    <span
-                        class="badge {% if pos.side|lower == 'long' %}badge-long{% elif pos.side|lower == 'short' %}badge-short{% endif %}">
-                        {{ pos.side|upper }}
+                    <span class="badge {% if pos.side|lower == 'long' %}badge-long{% elif pos.side|lower == 'short' %}badge-short{% endif %}">
+                        {% if pos.side|lower == 'long' %}▲{% else %}▼{% endif %} {{ pos.side|upper }}
                     </span>
                     {% else %}
                     -
                     {% endif %}
                 </td>
-                <td>{{ '%.4f' | format(pos.size) }}</td>
-                <td>{{ '%.4f' | format(pos.entry_price) if pos.entry_price else '-' }}</td>
-                <td>{{ '%.4f' | format(pos.mark_price) if pos.mark_price else '-' }}</td>
-                <td>{{ pos.leverage or '1x' }}</td>
+                <td style="font-family: monospace;">{{ '%.4f' | format(pos.size) }}</td>
+                <td style="font-family: monospace;">${{ '%.2f' | format(pos.entry_price) if pos.entry_price else '-' }}</td>
+                <td style="font-family: monospace; font-weight: 600;">${{ '%.2f' | format(pos.mark_price) if pos.mark_price else '-' }}</td>
+                <td>
+                    {% if price_change_pct is not none %}
+                    <span class="{% if price_change_pct >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-weight: 600;">
+                        {{ '{:+.2f}'.format(price_change_pct) }}%
+                    </span>
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="leverage-badge">{{ pos.leverage or '1x' }}</span>
+                </td>
                 <td>
                     {% if pos.pnl_usd is not none %}
-                    <span class="{% if pos.pnl_usd >= 0 %}text-success{% else %}text-danger{% endif %}">
-                        {{ '%.2f' | format(pos.pnl_usd) }} $
+                    <span class="pnl-value {% if pos.pnl_usd >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        {{ '{:+.2f}'.format(pos.pnl_usd) }} $
                     </span>
                     {% else %}
                     -
                     {% endif %}
                 </td>
-                <td class="text-muted">{{ pos.snapshot_created_at.strftime('%d/%m %H:%M') }}</td>
+                <td class="text-muted" style="font-size: 0.85rem;">{{ pos.snapshot_created_at.strftime('%d/%m %H:%M') }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+<style>
+    .positions-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .summary-item {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .summary-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .summary-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .leverage-badge {
+        display: inline-block;
+        background: #eff6ff;
+        color: #1e40af;
+        padding: 0.2rem 0.5rem;
+        border-radius: 0.3rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .pnl-value {
+        font-weight: 700;
+        font-size: 0.95rem;
+    }
+</style>
+
 {% else %}
-<div style="padding: 2rem; text-align: center; color: var(--text-muted);">
-    <p>Nessuna posizione aperta al momento.</p>
+<div style="padding: 3rem; text-align: center; color: #64748b; background: #f8fafc; border-radius: 0.75rem; border: 1px solid #e2e8f0;">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
+    <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">Nessuna posizione aperta</p>
+    <p style="font-size: 0.9rem;">Il bot non ha posizioni attive al momento.</p>
 </div>
 {% endif %}

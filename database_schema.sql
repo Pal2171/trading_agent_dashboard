@@ -58,10 +58,21 @@ CREATE TABLE IF NOT EXISTS indicators_contexts (
     ts TIMESTAMP WITH TIME ZONE,
     price DOUBLE PRECISION,
     
-    -- Indicatori Tecnici
+    -- Indicatori Tecnici - EMA
+    ema9 DOUBLE PRECISION,
     ema20 DOUBLE PRECISION,
+    ema21 DOUBLE PRECISION,
+    
+    -- Indicatori Tecnici - Trend
+    supertrend TEXT, -- 'BULLISH' o 'BEARISH'
+    adx DOUBLE PRECISION,
     macd DOUBLE PRECISION,
+    
+    -- Indicatori Tecnici - Momentum
     rsi_7 DOUBLE PRECISION,
+    rsi_14 DOUBLE PRECISION,
+    
+    -- Volume e Derivati
     volume_bid DOUBLE PRECISION,
     volume_ask DOUBLE PRECISION,
     open_interest_latest DOUBLE PRECISION,
@@ -76,13 +87,22 @@ CREATE TABLE IF NOT EXISTS indicators_contexts (
     volume_15m_current DOUBLE PRECISION,
     volume_15m_average DOUBLE PRECISION,
     
-    -- Serie temporali e dati complessi (salvati come JSON)
+    -- Pattern e Serie Temporali
+    candlestick_patterns JSONB,
     intraday_mid_prices JSONB,
     intraday_ema20_series JSONB,
     intraday_macd_series JSONB,
     intraday_rsi7_series JSONB,
+    intraday_rsi14_series JSONB,
     lt15m_macd_series JSONB,
-    lt15m_rsi14_series JSONB
+    lt15m_rsi14_series JSONB,
+    
+    -- Pivot Points (DEPRECATED - mantenuti per compatibilità)
+    pp DOUBLE PRECISION,
+    s1 DOUBLE PRECISION,
+    s2 DOUBLE PRECISION,
+    r1 DOUBLE PRECISION,
+    r2 DOUBLE PRECISION
 );
 
 -- 6. News Contexts

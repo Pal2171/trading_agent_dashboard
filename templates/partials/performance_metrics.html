@@ -1,0 +1,89 @@
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-label">Saldo Corrente</div>
+        <div class="metric-value">
+            {% if metrics.current_balance is not none %}
+            ${{ '{:,.2f}'.format(metrics.current_balance) }}
+            {% else %}
+            N/A
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-label">Rendimento Totale</div>
+        <div class="metric-value {% if metrics.total_return_pct %}{% if metrics.total_return_pct >= 0 %}text-success{% else %}text-danger{% endif %}{% endif %}">
+            {% if metrics.total_return_pct is not none %}
+            {{ '{:+.2f}'.format(metrics.total_return_pct) }}%
+            {% else %}
+            N/A
+            {% endif %}
+        </div>
+        {% if metrics.total_return_usd is not none %}
+        <div class="metric-subvalue {% if metrics.total_return_usd >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {{ '{:+,.2f}'.format(metrics.total_return_usd) }} USD
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-label">Max Drawdown</div>
+        <div class="metric-value {% if metrics.max_drawdown_pct %}text-danger{% endif %}">
+            {% if metrics.max_drawdown_pct is not none %}
+            {{ '{:.2f}'.format(metrics.max_drawdown_pct) }}%
+            {% else %}
+            N/A
+            {% endif %}
+        </div>
+        {% if metrics.peak_balance is not none %}
+        <div class="metric-subvalue text-muted">
+            Peak: ${{ '{:,.2f}'.format(metrics.peak_balance) }}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-label">Operazioni Totali</div>
+        <div class="metric-value">{{ metrics.total_operations }}</div>
+        <div class="metric-subvalue text-muted">
+            Buy: {{ metrics.buy_operations }} | Sell: {{ metrics.sell_operations }} | Hold: {{ metrics.hold_operations }}
+        </div>
+    </div>
+</div>
+
+<style>
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+    }
+
+    .metric-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        text-align: center;
+    }
+
+    .metric-label {
+        font-size: 0.8rem;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 0.25rem;
+    }
+
+    .metric-subvalue {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+</style>

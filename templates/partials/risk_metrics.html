@@ -1,0 +1,149 @@
+<div class="risk-metrics-container">
+    <div class="risk-grid">
+        <div class="risk-card">
+            <div class="risk-label">Posizioni Totali</div>
+            <div class="risk-value">{{ metrics.total_positions }}</div>
+            <div class="risk-breakdown">
+                <span class="text-success">▲ {{ metrics.long_positions }} Long</span>
+                <span style="color: #cbd5e1;">|</span>
+                <span class="text-danger">▼ {{ metrics.short_positions }} Short</span>
+            </div>
+        </div>
+
+        <div class="risk-card">
+            <div class="risk-label">Esposizione Totale</div>
+            <div class="risk-value">${{ '{:,.0f}'.format(metrics.total_exposure_usd) }}</div>
+            {% if metrics.largest_position_pct is not none %}
+            <div class="risk-subvalue text-muted">
+                Pos. più grande: {{ '{:.1f}'.format(metrics.largest_position_pct) }}%
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="risk-card">
+            <div class="risk-label">Leva Media</div>
+            <div class="risk-value">
+                {% if metrics.avg_leverage is not none %}
+                {{ '{:.1f}'.format(metrics.avg_leverage) }}x
+                {% else %}
+                <span class="text-muted">N/A</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Visual indicator per Long/Short balance -->
+    {% if metrics.total_positions > 0 %}
+    <div class="position-balance-bar">
+        <div class="balance-label">Bilanciamento Posizioni</div>
+        <div class="balance-bar">
+            <div class="balance-long" style="width: {{ (metrics.long_positions / metrics.total_positions * 100) }}%">
+                {% if metrics.long_positions > 0 %}
+                {{ metrics.long_positions }}L
+                {% endif %}
+            </div>
+            <div class="balance-short" style="width: {{ (metrics.short_positions / metrics.total_positions * 100) }}%">
+                {% if metrics.short_positions > 0 %}
+                {{ metrics.short_positions }}S
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .risk-metrics-container {
+        background: #ffffff;
+    }
+
+    .risk-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .risk-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        text-align: center;
+    }
+
+    .risk-label {
+        font-size: 0.8rem;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+
+    .risk-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 0.25rem;
+    }
+
+    .risk-breakdown {
+        font-size: 0.85rem;
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .risk-subvalue {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+
+    .position-balance-bar {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 1rem;
+    }
+
+    .balance-label {
+        font-size: 0.8rem;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.75rem;
+    }
+
+    .balance-bar {
+        display: flex;
+        height: 2.5rem;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+    }
+
+    .balance-long {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 0.9rem;
+        transition: width 0.3s ease;
+    }
+
+    .balance-short {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 0.9rem;
+        transition: width 0.3s ease;
+    }
+</style>
