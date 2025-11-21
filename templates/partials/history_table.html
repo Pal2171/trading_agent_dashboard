@@ -1,51 +1,93 @@
 {% if operations %}
-<div class="table-container">
-    <table>
+<!-- Summary Totals -->
+<div class="history-summary">
+    <div class="summary-card">
+        <div class="summary-label">Operazioni Totali</div>
+        <div class="summary-value">{{ operations | length }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">Aperture (Open/Buy)</div>
+        <div class="summary-value text-success">
+            {{ operations | selectattr('operation', 'in', ['open', 'buy', 'OPEN', 'BUY']) | list | length }}
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">Chiusure (Close/Sell)</div>
+        <div class="summary-value text-danger">
+            {{ operations | selectattr('operation', 'in', ['close', 'sell', 'CLOSE', 'SELL']) | list | length }}
+        </div>
+    </div>
+</div>
+
+<!-- Operations Table -->
+<div class="history-table-container">
+    <table class="history-table">
         <thead>
             <tr>
-                <th>Data</th>
+                <th>Data/Ora</th>
                 <th>Operazione</th>
                 <th>Simbolo</th>
                 <th>Direzione</th>
-                <th>Target Balance</th>
                 <th>Leva</th>
+                <th>Target %</th>
                 <th>Motivazione</th>
             </tr>
         </thead>
         <tbody>
             {% for op in operations %}
-            <tr>
-                <td class="text-muted">{{ op.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
-                <td><strong>{{ op.operation|upper }}</strong></td>
-                <td>{{ op.symbol or '-' }}</td>
-                <td>
+            <tr class="operation-row {% if op.operation|lower in ['open', 'buy'] %}row-open{% elif op.operation|lower in ['close', 'sell'] %}row-close{% endif %}">
+                <td class="time-col">
+                    <div class="time-main">{{ op.created_at.strftime('%d/%m/%Y') }}</div>
+                    <div class="time-sub">{{ op.created_at.strftime('%H:%M:%S') }}</div>
+                </td>
+                <td class="operation-col">
+                    <span class="operation-badge {% if op.operation|lower in ['open', 'buy'] %}badge-open{% elif op.operation|lower in ['close', 'sell'] %}badge-close{% endif %}">
+                        {% if op.operation|lower in ['open', 'buy'] %}
+                        🔓 {{ op.operation|upper }}
+                        {% elif op.operation|lower in ['close', 'sell'] %}
+                        🔒 {{ op.operation|upper }}
+                        {% else %}
+                        {{ op.operation|upper }}
+                        {% endif %}
+                    </span>
+                </td>
+                <td class="symbol-col">
+                    <strong>{{ op.symbol or '-' }}</strong>
+                </td>
+                <td class="direction-col">
                     {% if op.direction %}
-                    <span
-                        class="badge {% if op.direction|lower == 'long' %}badge-long{% elif op.direction|lower == 'short' %}badge-short{% endif %}">
-                        {{ op.direction|upper }}
+                    <span class="direction-badge {% if op.direction|lower == 'long' %}badge-long{% elif op.direction|lower == 'short' %}badge-short{% endif %}">
+                        {% if op.direction|lower == 'long' %}📈{% else %}📉{% endif %} {{ op.direction|upper }}
                     </span>
                     {% else %}
-                    -
+                    <span class="text-muted">-</span>
                     {% endif %}
                 </td>
-                <td>
+                <td class="leverage-col">
+                    {% if op.leverage %}
+                    <span class="leverage-badge">{{ op.leverage }}x</span>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td class="target-col">
                     {% if op.target_portion_of_balance is not none %}
                     {{ '%.1f' | format(op.target_portion_of_balance * 100) }}%
                     {% else %}
-                    -
+                    <span class="text-muted">-</span>
                     {% endif %}
                 </td>
-                <td>{{ op.leverage or '-' }}</td>
-                <td>
-                    {% set reason = op.raw_payload.get('reason') or op.raw_payload.get('motivation') or
-                    op.raw_payload.get('comment') %}
+                <td class="motivation-col">
+                    {% set reason = op.raw_payload.get('reason') or op.raw_payload.get('motivation') or op.raw_payload.get('comment') %}
                     {% if reason %}
-                    <details>
-                        <summary>Leggi</summary>
-                        <p style="margin-top:0.5rem; font-size:0.85rem; white-space:pre-wrap;">{{ reason }}</p>
+                    <details class="motivation-details">
+                        <summary class="motivation-summary">📄 Leggi motivazione</summary>
+                        <div class="motivation-content">
+                            {{ reason }}
+                        </div>
                     </details>
                     {% else %}
-                    <span class="text-muted">-</span>
+                    <span class="text-muted">N/A</span>
                     {% endif %}
                 </td>
             </tr>
@@ -53,8 +95,204 @@
         </tbody>
     </table>
 </div>
+
+<style>
+    .history-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .summary-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        text-align: center;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .summary-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        opacity: 0.9;
+        margin-bottom: 0.5rem;
+    }
+
+    .summary-value {
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .history-table-container {
+        overflow-x: auto;
+        border-radius: 0.75rem;
+        border: 1px solid #e2e8f0;
+        background: white;
+    }
+
+    .history-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+        margin-bottom: 0;
+    }
+
+    .history-table thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .history-table th {
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        border-bottom: none;
+    }
+
+    .history-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        color: #0f172a;
+        vertical-align: middle;
+    }
+
+    .operation-row {
+        transition: background-color 0.2s;
+    }
+
+    .operation-row:hover {
+        background-color: #f8fafc;
+    }
+
+    .row-open {
+        border-left: 3px solid #10b981;
+    }
+
+    .row-close {
+        border-left: 3px solid #ef4444;
+    }
+
+    .time-col {
+        min-width: 120px;
+    }
+
+    .time-main {
+        font-weight: 600;
+        color: #0f172a;
+        font-size: 0.9rem;
+    }
+
+    .time-sub {
+        font-size: 0.8rem;
+        color: #64748b;
+        margin-top: 0.15rem;
+    }
+
+    .operation-badge {
+        display: inline-block;
+        padding: 0.4rem 0.8rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    .badge-open {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-close {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .symbol-col strong {
+        font-size: 0.95rem;
+        color: #0f172a;
+    }
+
+    .direction-badge {
+        display: inline-block;
+        padding: 0.3rem 0.7rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+
+    .leverage-badge {
+        display: inline-block;
+        background: #eff6ff;
+        color: #1e40af;
+        padding: 0.3rem 0.6rem;
+        border-radius: 0.375rem;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+
+    .motivation-details {
+        cursor: pointer;
+    }
+
+    .motivation-summary {
+        color: #3b82f6;
+        font-weight: 500;
+        font-size: 0.85rem;
+        cursor: pointer;
+        list-style: none;
+        padding: 0.5rem 0.75rem;
+        background: #eff6ff;
+        border-radius: 0.5rem;
+        transition: all 0.2s;
+    }
+
+    .motivation-summary:hover {
+        background: #dbeafe;
+    }
+
+    .motivation-summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .motivation-content {
+        margin-top: 0.75rem;
+        padding: 1rem;
+        background: #f8fafc;
+        border-left: 3px solid #3b82f6;
+        border-radius: 0.5rem;
+        font-size: 0.85rem;
+        line-height: 1.6;
+        color: #334155;
+        white-space: pre-wrap;
+        max-width: 500px;
+    }
+
+    .text-muted {
+        color: #94a3b8;
+    }
+
+    @media (max-width: 1024px) {
+        .history-table {
+            font-size: 0.85rem;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 0.75rem 0.5rem;
+        }
+    }
+</style>
+
 {% else %}
-<div style="padding: 2rem; text-align: center; color: var(--text-muted);">
-    <p>Nessuna operazione trovata nello storico.</p>
+<div style="padding: 3rem; text-align: center; color: #64748b; background: #f8fafc; border-radius: 0.75rem; border: 1px solid #e2e8f0;">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+    <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">Nessuna operazione nello storico</p>
+    <p style="font-size: 0.9rem;">Il bot non ha ancora eseguito operazioni di trading.</p>
 </div>
 {% endif %}

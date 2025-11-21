@@ -4,15 +4,24 @@
 
 {% block content %}
 <article class="card">
-    <div class="flex-between" style="margin-bottom: 1rem;">
-        <div>
-            <h2>Storico Operazioni</h2>
-            <p class="card-subtitle">Lista cronologica delle operazioni eseguite (esclusi HOLD).</p>
-        </div>
+    <div style="margin-bottom: 1.5rem;">
+        <h2>📜 Storico Operazioni</h2>
+        <p class="card-subtitle">Cronologia completa delle operazioni di trading eseguite dal bot (esclusi HOLD).</p>
     </div>
 
-    <div id="history-table" hx-get="/ui/history" hx-trigger="load">
-        <div aria-busy="true">Caricamento storico...</div>
+    <div id="history-table" hx-get="/ui/history" hx-trigger="load, every 60s">
+        <div aria-busy="true">Caricamento storico operazioni...</div>
     </div>
 </article>
+
+<style>
+    [aria-busy="true"] {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem;
+        color: #64748b;
+        font-size: 0.95rem;
+    }
+</style>
 {% endblock %}
