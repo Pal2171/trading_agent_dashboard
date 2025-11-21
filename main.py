@@ -240,6 +240,60 @@ def get_bot_operations(
     return operations
 
 
+@app.get("/history", response_model=List[BotOperation])
+def get_history(
+    limit: int = Query(
+        100,
+        ge=1,
+        le=1000,
+        description="Numero massimo di operazioni da restituire",
+    ),
+) -> List[BotOperation]:
+    """Restituisce lo storico operazioni filtrando i 'HOLD'."""
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    bo.id,
+                    bo.created_at,
+                    bo.operation,
+                    bo.symbol,
+                    bo.direction,
+                    bo.target_portion_of_balance,
+                    bo.leverage,
+                    bo.raw_payload,
+                    ac.system_prompt
+                FROM bot_operations AS bo
+                LEFT JOIN ai_contexts AS ac ON bo.context_id = ac.id
+                WHERE bo.operation NOT ILIKE 'hold'
+                ORDER BY bo.created_at DESC
+                LIMIT %s;
+                """,
+                (limit,),
+            )
+            rows = cur.fetchall()
+
+    operations: List[BotOperation] = []
+    for row in rows:
+        operations.append(
+            BotOperation(
+                id=row[0],
+                created_at=row[1],
+                operation=row[2],
+                symbol=row[3],
+                direction=row[4],
+                target_portion_of_balance=float(row[5]) if row[5] is not None else None,
+                leverage=float(row[6]) if row[6] is not None else None,
+                raw_payload=row[7],
+                system_prompt=row[8],
+            )
+        )
+
+    return operations
+
+
 # =====================
 # Endpoint HTML + HTMX
 # =====================
@@ -283,6 +337,22 @@ async def ui_bot_operations(request: Request) -> HTMLResponse:
     operations = get_bot_operations(limit=50)
     return templates.TemplateResponse(
         "partials/bot_operations_table.html",
+        {"request": request, "operations": operations},
+    )
+
+
+@app.get("/history-page", response_class=HTMLResponse)
+async def history_page(request: Request) -> HTMLResponse:
+    """Pagina HTML dedicata allo storico operazioni."""
+    return templates.TemplateResponse("history.html", {"request": request})
+
+
+@app.get("/ui/history", response_class=HTMLResponse)
+async def ui_history(request: Request) -> HTMLResponse:
+    """Partial HTML per la tabella storico."""
+    operations = get_history(limit=100)
+    return templates.TemplateResponse(
+        "partials/history_table.html",
         {"request": request, "operations": operations},
     )
 

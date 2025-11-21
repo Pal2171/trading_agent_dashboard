@@ -1,0 +1,60 @@
+{% if operations %}
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Operazione</th>
+                <th>Simbolo</th>
+                <th>Direzione</th>
+                <th>Target Balance</th>
+                <th>Leva</th>
+                <th>Motivazione</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for op in operations %}
+            <tr>
+                <td class="text-muted">{{ op.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                <td><strong>{{ op.operation|upper }}</strong></td>
+                <td>{{ op.symbol or '-' }}</td>
+                <td>
+                    {% if op.direction %}
+                    <span
+                        class="badge {% if op.direction|lower == 'long' %}badge-long{% elif op.direction|lower == 'short' %}badge-short{% endif %}">
+                        {{ op.direction|upper }}
+                    </span>
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if op.target_portion_of_balance is not none %}
+                    {{ '%.1f' | format(op.target_portion_of_balance * 100) }}%
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+                <td>{{ op.leverage or '-' }}</td>
+                <td>
+                    {% set reason = op.raw_payload.get('reason') or op.raw_payload.get('motivation') or
+                    op.raw_payload.get('comment') %}
+                    {% if reason %}
+                    <details>
+                        <summary>Leggi</summary>
+                        <p style="margin-top:0.5rem; font-size:0.85rem; white-space:pre-wrap;">{{ reason }}</p>
+                    </details>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div style="padding: 2rem; text-align: center; color: var(--text-muted);">
+    <p>Nessuna operazione trovata nello storico.</p>
+</div>
+{% endif %}
