@@ -1,104 +1,141 @@
 {% if operations %}
-<div class="last-ops-container">
-    {% for op in operations %}
-    <div class="last-op-card">
-        <div class="op-header">
-            <div class="op-symbol">
-                <strong>{{ op.symbol }}</strong>
+<div class="carousel-container">
+    <div class="carousel-wrapper">
+        <button class="carousel-btn carousel-prev" aria-label="Precedente">‹</button>
+
+        <div class="carousel-track-container">
+            <div class="carousel-track">
+                {% for op in operations %}
+                <div class="carousel-slide">
+                    <div class="op-card">
+                        <div class="op-header">
+                            <div class="op-symbol">
+                                <strong>{{ op.symbol }}</strong>
+                            </div>
+                            <div class="op-badge-container">
+                                <span
+                                    class="op-badge {% if op.operation|lower in ['open', 'buy'] %}badge-buy{% elif op.operation|lower in ['close', 'sell'] %}badge-sell{% elif op.operation|lower == 'hold' %}badge-hold{% endif %}">
+                                    {% if op.operation|lower in ['open', 'buy'] %}
+                                    🔓 {{ op.operation|upper }}
+                                    {% elif op.operation|lower in ['close', 'sell'] %}
+                                    🔒 {{ op.operation|upper }}
+                                    {% elif op.operation|lower == 'hold' %}
+                                    ⏸️ HOLD
+                                    {% else %}
+                                    {{ op.operation|upper }}
+                                    {% endif %}
+                                </span>
+                                {% if op.direction %}
+                                <span
+                                    class="direction-badge {% if op.direction|lower == 'long' %}badge-long{% elif op.direction|lower == 'short' %}badge-short{% endif %}">
+                                    {% if op.direction|lower == 'long' %}📈{% else %}📉{% endif %} {{ op.direction|upper
+                                    }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="op-details">
+                            {% if op.leverage %}
+                            <span class="detail-item">Leva: <strong>{{ op.leverage }}x</strong></span>
+                            {% endif %}
+                            {% if op.target_portion_of_balance is not none %}
+                            <span class="detail-item">Target: <strong>{{ '%.1f' | format(op.target_portion_of_balance *
+                                    100) }}%</strong></span>
+                            {% endif %}
+                        </div>
+
+                        {% set reason = op.raw_payload.get('reason') or op.raw_payload.get('motivation') or
+                        op.raw_payload.get('comment') %}
+                        {% if reason %}
+                        <div class="op-reason">
+                            <div class="reason-icon">💭</div>
+                            <div class="reason-text">{{ reason | truncate(200, True, '…') }}</div>
+                        </div>
+                        {% endif %}
+
+                        <div class="op-timestamp">
+                            {{ op.created_at.strftime('%d/%m/%Y %H:%M') }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
-            <div class="op-badge-container">
-                <span
-                    class="op-badge {% if op.operation|lower in ['open', 'buy'] %}badge-buy{% elif op.operation|lower in ['close', 'sell'] %}badge-sell{% elif op.operation|lower == 'hold' %}badge-hold{% endif %}">
-                    {% if op.operation|lower in ['open', 'buy'] %}
-                    🔓 {{ op.operation|upper }}
-                    {% elif op.operation|lower in ['close', 'sell'] %}
-                    🔒 {{ op.operation|upper }}
-                    {% elif op.operation|lower == 'hold' %}
-                    ⏸️ HOLD
-                    {% else %}
-                    {{ op.operation|upper }}
-                    {% endif %}
-                </span>
-                {% if op.direction %}
-                <span
-                    class="direction-badge {% if op.direction|lower == 'long' %}badge-long{% elif op.direction|lower == 'short' %}badge-short{% endif %}">
-                    {% if op.direction|lower == 'long' %}📈{% else %}📉{% endif %} {{ op.direction|upper }}
-                </span>
-                {% endif %}
-            </div>
         </div>
 
-        <div class="op-details">
-            {% if op.leverage %}
-            <span class="detail-item">Leva: <strong>{{ op.leverage }}x</strong></span>
-            {% endif %}
-            {% if op.target_portion_of_balance is not none %}
-            <span class="detail-item">Target: <strong>{{ '%.1f' | format(op.target_portion_of_balance * 100)
-                    }}%</strong></span>
-            {% endif %}
-        </div>
-
-        {% set reason = op.raw_payload.get('reason') or op.raw_payload.get('motivation') or
-        op.raw_payload.get('comment') %}
-        {% if reason %}
-        <div class="op-reason">
-            <div class="reason-icon">💭</div>
-            <div class="reason-text">{{ reason | truncate(150, True, '…') }}</div>
-        </div>
-        {% endif %}
-
-        <div class="op-timestamp">
-            {{ op.created_at.strftime('%d/%m/%Y %H:%M') }}
-        </div>
+        <button class="carousel-btn carousel-next" aria-label="Successivo">›</button>
     </div>
-    {% endfor %}
+
+    <div class="carousel-indicators">
+        {% for op in operations %}
+        <button class="carousel-indicator {% if loop.first %}active{% endif %}" data-slide="{{ loop.index0 }}"
+            aria-label="Vai a {{ op.symbol }}"></button>
+        {% endfor %}
+    </div>
 </div>
 
 <style>
-    .last-ops-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    .carousel-container {
+        position: relative;
+        width: 100%;
+    }
+
+    .carousel-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
         gap: 1rem;
     }
 
-    .last-op-card {
+    .carousel-track-container {
+        overflow: hidden;
+        width: 100%;
+        border-radius: 0.75rem;
+    }
+
+    .carousel-track {
+        display: flex;
+        transition: transform 0.4s ease-in-out;
+    }
+
+    .carousel-slide {
+        min-width: 100%;
+        flex-shrink: 0;
+    }
+
+    .op-card {
         background: #f8fafc;
         border: 1px solid #e2e8f0;
         border-radius: 0.75rem;
-        padding: 1rem;
-        transition: all 0.2s;
-    }
-
-    .last-op-card:hover {
-        border-color: #cbd5e1;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        padding: 1.5rem;
     }
 
     .op-header {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 0.75rem;
+        margin-bottom: 1rem;
         gap: 0.5rem;
     }
 
     .op-symbol {
-        font-size: 1.1rem;
+        font-size: 1.5rem;
         color: #0f172a;
+        font-weight: 700;
     }
 
     .op-badge-container {
         display: flex;
         flex-direction: column;
-        gap: 0.35rem;
+        gap: 0.4rem;
         align-items: flex-end;
     }
 
     .op-badge {
         display: inline-block;
-        padding: 0.25rem 0.65rem;
-        border-radius: 0.375rem;
-        font-size: 0.75rem;
+        padding: 0.35rem 0.85rem;
+        border-radius: 0.5rem;
+        font-size: 0.85rem;
         font-weight: 600;
         text-transform: uppercase;
         white-space: nowrap;
@@ -121,9 +158,9 @@
 
     .direction-badge {
         display: inline-block;
-        padding: 0.2rem 0.5rem;
-        border-radius: 0.375rem;
-        font-size: 0.7rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 0.5rem;
+        font-size: 0.8rem;
         font-weight: 600;
     }
 
@@ -139,9 +176,9 @@
 
     .op-details {
         display: flex;
-        gap: 1rem;
-        margin-bottom: 0.75rem;
-        font-size: 0.85rem;
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
         color: #64748b;
     }
 
@@ -151,37 +188,175 @@
 
     .op-reason {
         display: flex;
-        gap: 0.5rem;
+        gap: 0.75rem;
         background: #ffffff;
         border-left: 3px solid #94a3b8;
-        border-radius: 0.375rem;
-        padding: 0.65rem;
-        margin-bottom: 0.75rem;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
     }
 
     .reason-icon {
-        font-size: 1rem;
+        font-size: 1.25rem;
         flex-shrink: 0;
     }
 
     .reason-text {
-        font-size: 0.8rem;
-        line-height: 1.5;
+        font-size: 0.9rem;
+        line-height: 1.6;
         color: #475569;
     }
 
     .op-timestamp {
-        font-size: 0.75rem;
+        font-size: 0.8rem;
         color: #94a3b8;
         text-align: right;
+        font-weight: 500;
+    }
+
+    .carousel-btn {
+        background: #ffffff;
+        border: 2px solid #e2e8f0;
+        border-radius: 50%;
+        width: 3rem;
+        height: 3rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex-shrink: 0;
+        user-select: none;
+    }
+
+    .carousel-btn:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        color: #0f172a;
+    }
+
+    .carousel-btn:active {
+        transform: scale(0.95);
+    }
+
+    .carousel-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .carousel-indicators {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 1.25rem;
+    }
+
+    .carousel-indicator {
+        width: 0.75rem;
+        height: 0.75rem;
+        border-radius: 50%;
+        border: none;
+        background: #cbd5e1;
+        cursor: pointer;
+        transition: all 0.2s;
+        padding: 0;
+    }
+
+    .carousel-indicator:hover {
+        background: #94a3b8;
+    }
+
+    .carousel-indicator.active {
+        background: #3b82f6;
+        width: 2rem;
+        border-radius: 0.375rem;
     }
 
     @media (max-width: 768px) {
-        .last-ops-container {
-            grid-template-columns: 1fr;
+        .carousel-btn {
+            width: 2.5rem;
+            height: 2.5rem;
+            font-size: 1.5rem;
+        }
+
+        .op-card {
+            padding: 1rem;
+        }
+
+        .op-symbol {
+            font-size: 1.25rem;
         }
     }
 </style>
+
+<script>
+    (function () {
+        try {
+            const script = document.currentScript;
+            const container = script.previousElementSibling;
+            if (!container || !container.classList.contains('carousel-container')) return;
+
+            const track = container.querySelector('.carousel-track');
+            const slides = Array.from(container.querySelectorAll('.carousel-slide'));
+            const prevBtn = container.querySelector('.carousel-prev');
+            const nextBtn = container.querySelector('.carousel-next');
+            const indicators = Array.from(container.querySelectorAll('.carousel-indicator'));
+
+            let currentIndex = 0;
+
+            function updateCarousel() {
+                track.style.transform = `translateX(-${currentIndex * 100}%)`;
+
+                // Update indicators
+                indicators.forEach((indicator, idx) => {
+                    indicator.classList.toggle('active', idx === currentIndex);
+                });
+
+                // Update buttons
+                prevBtn.disabled = currentIndex === 0;
+                nextBtn.disabled = currentIndex === slides.length - 1;
+            }
+
+            prevBtn.addEventListener('click', () => {
+                if (currentIndex > 0) {
+                    currentIndex--;
+                    updateCarousel();
+                }
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (currentIndex < slides.length - 1) {
+                    currentIndex++;
+                    updateCarousel();
+                }
+            });
+
+            indicators.forEach((indicator, idx) => {
+                indicator.addEventListener('click', () => {
+                    currentIndex = idx;
+                    updateCarousel();
+                });
+            });
+
+            // Keyboard navigation
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft' && currentIndex > 0) {
+                    currentIndex--;
+                    updateCarousel();
+                } else if (e.key === 'ArrowRight' && currentIndex < slides.length - 1) {
+                    currentIndex++;
+                    updateCarousel();
+                }
+            });
+
+            updateCarousel();
+        } catch (e) {
+            console.error('Carousel error:', e);
+        }
+    })();
+</script>
 
 {% else %}
 <div
