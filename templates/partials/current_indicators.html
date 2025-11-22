@@ -11,16 +11,11 @@
             </span>
             {% endif %}
             {% if available_tickers and available_tickers|length > 1 %}
-            <select 
-                id="tickerSelector" 
-                class="ticker-selector"
-                hx-get="/ui/current-indicators" 
-                hx-target="#indicators-card"
-                hx-include="this"
-                name="ticker">
-                <option value="">Tutti</option>
+            <select id="tickerSelector" class="ticker-selector" hx-get="/ui/current-indicators"
+                hx-target="#indicators-card" hx-include="this" name="ticker">
                 {% for t in available_tickers %}
-                <option value="{{ t }}" {% if selected_ticker == t %}selected{% endif %}>{{ t }}</option>
+                <option value="{{ t }}" {% if selected_ticker==t or (not selected_ticker and loop.first) %}selected{%
+                    endif %}>{{ t }}</option>
                 {% endfor %}
             </select>
             {% endif %}
@@ -36,7 +31,8 @@
             <div class="indicator-label">Supertrend</div>
             <div class="indicator-value">
                 {% if indicators.supertrend %}
-                <span class="badge-supertrend {% if indicators.supertrend == 'BULLISH' %}badge-bullish{% else %}badge-bearish{% endif %}">
+                <span
+                    class="badge-supertrend {% if indicators.supertrend == 'BULLISH' %}badge-bullish{% else %}badge-bearish{% endif %}">
                     {% if indicators.supertrend == 'BULLISH' %}🟢{% else %}🔴{% endif %} {{ indicators.supertrend }}
                 </span>
                 {% else %}
@@ -105,8 +101,9 @@
             <div class="indicator-label">RSI-7</div>
             <div class="indicator-value">
                 {% if indicators.rsi_7 is not none %}
-                <strong {% if indicators.rsi_7 > 70 %}class="text-danger"{% elif indicators.rsi_7 < 30 %}class="text-success"{% endif %}>
-                    {{ '{:.1f}'.format(indicators.rsi_7) }}
+                <strong {% if indicators.rsi_7> 70 %}class="text-danger"{% elif indicators.rsi_7 < 30
+                        %}class="text-success" {% endif %}>
+                        {{ '{:.1f}'.format(indicators.rsi_7) }}
                 </strong>
                 {% else %}
                 <span class="text-muted">N/A</span>
@@ -119,8 +116,9 @@
             <div class="indicator-label">RSI-14</div>
             <div class="indicator-value">
                 {% if indicators.rsi_14 is not none %}
-                <strong {% if indicators.rsi_14 > 70 %}class="text-danger"{% elif indicators.rsi_14 < 30 %}class="text-success"{% endif %}>
-                    {{ '{:.1f}'.format(indicators.rsi_14) }}
+                <strong {% if indicators.rsi_14> 70 %}class="text-danger"{% elif indicators.rsi_14 < 30
+                        %}class="text-success" {% endif %}>
+                        {{ '{:.1f}'.format(indicators.rsi_14) }}
                 </strong>
                 {% else %}
                 <span class="text-muted">N/A</span>
@@ -133,8 +131,9 @@
             <div class="indicator-label">MACD</div>
             <div class="indicator-value">
                 {% if indicators.macd is not none %}
-                <strong {% if indicators.macd > 0 %}class="text-success"{% elif indicators.macd < 0 %}class="text-danger"{% endif %}>
-                    {{ '{:.2f}'.format(indicators.macd) }}
+                <strong {% if indicators.macd> 0 %}class="text-success"{% elif indicators.macd < 0 %}class="text-danger"
+                        {% endif %}>
+                        {{ '{:.2f}'.format(indicators.macd) }}
                 </strong>
                 {% else %}
                 <span class="text-muted">N/A</span>

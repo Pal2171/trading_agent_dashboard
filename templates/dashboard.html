@@ -52,6 +52,17 @@
         </article>
     </div>
 
+    <!-- 3.5. Last AI Operations by Symbol -->
+    <article class="card">
+        <div style="margin-bottom: 1rem;">
+            <h2>🤖 Ultime Analisi AI</h2>
+            <p class="card-subtitle">Ultima operazione analizzata dall'AI per ogni valuta (incluso HOLD).</p>
+        </div>
+        <div id="last-operations-panel" hx-get="/ui/last-operations-by-symbol" hx-trigger="load, every 30s">
+            <div aria-busy="true">Caricamento analisi...</div>
+        </div>
+    </article>
+
     <!-- 4. Open Positions Table -->
     <article class="card">
         <div class="flex-between" style="margin-bottom: 1rem;">
