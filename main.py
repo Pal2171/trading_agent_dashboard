@@ -740,7 +740,7 @@ async def ui_current_indicators(
                 """
                 SELECT DISTINCT ticker 
                 FROM indicators_contexts 
-                WHERE ticker IS NOT NULL
+                WHERE ticker IS NOT NULL AND ticker != 'ETH'
                 ORDER BY ticker;
                 """
             )
