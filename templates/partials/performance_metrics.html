@@ -1,4 +1,5 @@
 <div class="metrics-grid">
+    <!-- Box 1: Saldo Corrente + Saldo Iniziale -->
     <div class="metric-card">
         <div class="metric-label">Saldo Corrente</div>
         <div class="metric-value">
@@ -8,22 +9,16 @@
             N/A
             {% endif %}
         </div>
-    </div>
-
-    <div class="metric-card">
-        <div class="metric-label">PNL Totale ($)</div>
-        <div
-            class="metric-value {% if metrics.total_return_usd %}{% if metrics.total_return_usd >= 0 %}text-success{% else %}text-danger{% endif %}{% endif %}">
-            {% if metrics.total_return_usd is not none %}
-            {{ '{:+,.2f}'.format(metrics.total_return_usd) }}
-            {% else %}
-            N/A
-            {% endif %}
+        {% if metrics.initial_balance is not none %}
+        <div class="metric-subvalue text-muted">
+            Iniziale: ${{ '{:,.2f}'.format(metrics.initial_balance) }}
         </div>
+        {% endif %}
     </div>
 
+    <!-- Box 2: PNL Totale (% + USD) -->
     <div class="metric-card">
-        <div class="metric-label">PNL Totale (%)</div>
+        <div class="metric-label">PNL Totale</div>
         <div
             class="metric-value {% if metrics.total_return_pct %}{% if metrics.total_return_pct >= 0 %}text-success{% else %}text-danger{% endif %}{% endif %}">
             {% if metrics.total_return_pct is not none %}
@@ -32,22 +27,26 @@
             N/A
             {% endif %}
         </div>
+        {% if metrics.total_return_usd is not none %}
+        <div class="metric-subvalue {% if metrics.total_return_usd >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {{ '{:+,.2f}'.format(metrics.total_return_usd) }} USD
+        </div>
+        {% endif %}
     </div>
 
+    <!-- Box 3: Operazioni Totali -->
     <div class="metric-card">
-        <div class="metric-label">Saldo Iniziale</div>
-        <div class="metric-value">
-            {% if metrics.initial_balance is not none %}
-            ${{ '{:,.2f}'.format(metrics.initial_balance) }}
-            {% else %}
-            N/A
-            {% endif %}
+        <div class="metric-label">Operazioni Totali</div>
+        <div class="metric-value">{{ metrics.total_operations }}</div>
+        <div class="metric-subvalue text-muted">
+            Buy: {{ metrics.buy_operations }} | Sell: {{ metrics.sell_operations }}
         </div>
     </div>
 
+    <!-- Box 4: Max Drawdown -->
     <div class="metric-card">
         <div class="metric-label">Max Drawdown</div>
-        <div class="metric-value {% if metrics.max_drawdown_pct %}text-danger{% endif %}">
+        <div class="metric-value text-danger">
             {% if metrics.max_drawdown_pct is not none %}
             {{ '{:.2f}'.format(metrics.max_drawdown_pct) }}%
             {% else %}
@@ -60,20 +59,12 @@
         </div>
         {% endif %}
     </div>
-
-    <div class="metric-card">
-        <div class="metric-label">Operazioni Totali</div>
-        <div class="metric-value">{{ metrics.total_operations }}</div>
-        <div class="metric-subvalue text-muted">
-            Buy: {{ metrics.buy_operations }} | Sell: {{ metrics.sell_operations }}
-        </div>
-    </div>
 </div>
 
 <style>
     .metrics-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 1rem;
     }
 
@@ -81,7 +72,7 @@
         background: #f8fafc;
         border: 1px solid #e2e8f0;
         border-radius: 0.75rem;
-        padding: 1rem;
+        padding: 1.25rem;
         text-align: center;
     }
 
@@ -104,6 +95,7 @@
     .metric-subvalue {
         font-size: 0.85rem;
         color: #64748b;
+        margin-top: 0.5rem;
     }
 
     .text-success {

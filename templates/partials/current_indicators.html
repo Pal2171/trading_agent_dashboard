@@ -11,14 +11,16 @@
             </span>
             {% endif %}
             {% if available_tickers and available_tickers|length > 1 %}
-            <select id="tickerSelector" class="ticker-selector" hx-get="/ui/current-indicators"
-                hx-target="#current-indicators-panel" hx-swap="innerHTML" hx-trigger="change"
-                hx-vals='js:{ticker: document.getElementById("tickerSelector").value}' name="ticker">
+            <div class="ticker-tabs">
                 {% for t in available_tickers %}
-                <option value="{{ t }}" {% if selected_ticker==t or (not selected_ticker and loop.first) %}selected{%
-                    endif %}>{{ t }}</option>
+                <button
+                    class="ticker-tab {% if selected_ticker==t or (not selected_ticker and loop.first) %}active{% endif %}"
+                    hx-get="/ui/current-indicators?ticker={{ t }}" hx-target="#current-indicators-panel"
+                    hx-swap="innerHTML">
+                    {{ t }}
+                </button>
                 {% endfor %}
-            </select>
+            </div>
             {% endif %}
         </div>
         <div class="text-muted" style="font-size: 0.85rem;">
@@ -299,26 +301,37 @@
         flex: 1;
     }
 
-    .ticker-selector {
-        padding: 0.4rem 0.75rem;
+    .ticker-tabs {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .ticker-tab {
+        padding: 0.4rem 1rem;
         border: 1px solid #e2e8f0;
         border-radius: 0.5rem;
         background: #ffffff;
-        color: #0f172a;
+        color: #64748b;
         font-size: 0.85rem;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
     }
 
-    .ticker-selector:hover {
+    .ticker-tab:hover {
         border-color: #cbd5e1;
         background: #f8fafc;
+        color: #0f172a;
     }
 
-    .ticker-selector:focus {
-        outline: none;
+    .ticker-tab.active {
+        background: #3b82f6;
         border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        color: #ffffff;
+    }
+
+    .ticker-tab.active:hover {
+        background: #2563eb;
+        border-color: #2563eb;
     }
 </style>
