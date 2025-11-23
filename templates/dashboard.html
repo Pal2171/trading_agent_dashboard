@@ -30,12 +30,13 @@
     <!-- 3. Current Market Indicators & Risk Metrics Grid -->
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
         <!-- Current Indicators -->
-        <article class="card" id="indicators-card">
+        <article class="card">
             <div style="margin-bottom: 1rem;">
                 <h2>📈 Indicatori di Mercato</h2>
                 <p class="card-subtitle">Ultimi indicatori tecnici disponibili.</p>
             </div>
-            <div id="current-indicators-panel" hx-get="/ui/current-indicators" hx-trigger="load, every 30s">
+            <div id="current-indicators-panel" hx-get="/ui/current-indicators" hx-trigger="load, every 30s"
+                hx-swap="innerHTML">
                 <div aria-busy="true">Caricamento indicatori...</div>
             </div>
         </article>

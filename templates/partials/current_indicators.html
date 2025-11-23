@@ -1,32 +1,30 @@
-<!-- Intestazione fissa (non viene aggiornata da HTMX) -->
-<div class="indicators-header">
-    <div style="display: flex; align-items: center; gap: 1rem;">
-        <strong style="font-size: 1.1rem;">
-            {% if indicators.ticker %}{{ indicators.ticker }}{% else %}N/A{% endif %}
-        </strong>
-        {% if indicators.price %}
-        <span style="font-size: 1.5rem; font-weight: 700; color: #0f172a;">
-            ${{ '{:,.2f}'.format(indicators.price) }}
-        </span>
-        {% endif %}
-        {% if available_tickers and available_tickers|length > 1 %}
-        <select id="tickerSelector" class="ticker-selector" hx-get="/ui/current-indicators"
-            hx-target="#indicators-content" hx-swap="innerHTML" hx-include="this" name="ticker">
-            {% for t in available_tickers %}
-            <option value="{{ t }}" {% if selected_ticker==t or (not selected_ticker and loop.first) %}selected{% endif
-                %}>{{ t }}</option>
-            {% endfor %}
-        </select>
-        {% endif %}
-    </div>
-    <div class="text-muted" style="font-size: 0.85rem;">
-        Aggiornato: {{ indicators.timestamp.strftime('%d/%m/%Y %H:%M:%S') if indicators.timestamp else 'N/A' }}
-    </div>
-</div>
-
-<!-- Contenuto dinamico (aggiornato da HTMX) -->
-<div id="indicators-content" class="indicators-container">
+<div class="indicators-container">
     {% if indicators.timestamp %}
+    <div class="indicators-header">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <strong style="font-size: 1.1rem;">
+                {% if indicators.ticker %}{{ indicators.ticker }}{% else %}N/A{% endif %}
+            </strong>
+            {% if indicators.price %}
+            <span style="font-size: 1.5rem; font-weight: 700; color: #0f172a;">
+                ${{ '{:,.2f}'.format(indicators.price) }}
+            </span>
+            {% endif %}
+            {% if available_tickers and available_tickers|length > 1 %}
+            <select id="tickerSelector" class="ticker-selector" hx-get="/ui/current-indicators"
+                hx-target="#current-indicators-panel" hx-swap="innerHTML" hx-include="this" name="ticker">
+                {% for t in available_tickers %}
+                <option value="{{ t }}" {% if selected_ticker==t or (not selected_ticker and loop.first) %}selected{%
+                    endif %}>{{ t }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
+        </div>
+        <div class="text-muted" style="font-size: 0.85rem;">
+            Aggiornato: {{ indicators.timestamp.strftime('%d/%m/%Y %H:%M:%S') }}
+        </div>
+    </div>
+
     <div class="indicators-grid">
         <!-- Supertrend -->
         <div class="indicator-item">
