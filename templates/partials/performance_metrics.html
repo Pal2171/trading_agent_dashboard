@@ -11,19 +11,38 @@
     </div>
 
     <div class="metric-card">
-        <div class="metric-label">Rendimento Totale</div>
-        <div class="metric-value {% if metrics.total_return_pct %}{% if metrics.total_return_pct >= 0 %}text-success{% else %}text-danger{% endif %}{% endif %}">
+        <div class="metric-label">PNL Totale ($)</div>
+        <div
+            class="metric-value {% if metrics.total_return_usd %}{% if metrics.total_return_usd >= 0 %}text-success{% else %}text-danger{% endif %}{% endif %}">
+            {% if metrics.total_return_usd is not none %}
+            {{ '{:+,.2f}'.format(metrics.total_return_usd) }}
+            {% else %}
+            N/A
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-label">PNL Totale (%)</div>
+        <div
+            class="metric-value {% if metrics.total_return_pct %}{% if metrics.total_return_pct >= 0 %}text-success{% else %}text-danger{% endif %}{% endif %}">
             {% if metrics.total_return_pct is not none %}
             {{ '{:+.2f}'.format(metrics.total_return_pct) }}%
             {% else %}
             N/A
             {% endif %}
         </div>
-        {% if metrics.total_return_usd is not none %}
-        <div class="metric-subvalue {% if metrics.total_return_usd >= 0 %}text-success{% else %}text-danger{% endif %}">
-            {{ '{:+,.2f}'.format(metrics.total_return_usd) }} USD
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-label">Saldo Iniziale</div>
+        <div class="metric-value">
+            {% if metrics.initial_balance is not none %}
+            ${{ '{:,.2f}'.format(metrics.initial_balance) }}
+            {% else %}
+            N/A
+            {% endif %}
         </div>
-        {% endif %}
     </div>
 
     <div class="metric-card">
@@ -46,7 +65,7 @@
         <div class="metric-label">Operazioni Totali</div>
         <div class="metric-value">{{ metrics.total_operations }}</div>
         <div class="metric-subvalue text-muted">
-            Buy: {{ metrics.buy_operations }} | Sell: {{ metrics.sell_operations }} | Hold: {{ metrics.hold_operations }}
+            Buy: {{ metrics.buy_operations }} | Sell: {{ metrics.sell_operations }}
         </div>
     </div>
 </div>
@@ -54,7 +73,7 @@
 <style>
     .metrics-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 1rem;
     }
 
@@ -67,7 +86,7 @@
     }
 
     .metric-label {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         color: #64748b;
         font-weight: 600;
         text-transform: uppercase;
@@ -85,5 +104,17 @@
     .metric-subvalue {
         font-size: 0.85rem;
         color: #64748b;
+    }
+
+    .text-success {
+        color: #16a34a !important;
+    }
+
+    .text-danger {
+        color: #dc2626 !important;
+    }
+
+    .text-muted {
+        color: #64748b !important;
     }
 </style>

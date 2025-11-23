@@ -354,11 +354,11 @@ def get_performance_metrics() -> PerformanceMetrics:
 
     with get_connection() as conn:
         with conn.cursor() as cur:
-            # Conta operazioni per tipo
+            # Conta operazioni per tipo (escluso HOLD dal totale)
             cur.execute(
                 """
                 SELECT 
-                    COUNT(*) as total,
+                    COUNT(CASE WHEN operation NOT ILIKE 'hold' THEN 1 END) as total,
                     COUNT(CASE WHEN operation ILIKE 'buy' OR operation ILIKE 'open' THEN 1 END) as buys,
                     COUNT(CASE WHEN operation ILIKE 'sell' OR operation ILIKE 'close' THEN 1 END) as sells,
                     COUNT(CASE WHEN operation ILIKE 'hold' THEN 1 END) as holds
