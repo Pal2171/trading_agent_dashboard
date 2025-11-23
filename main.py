@@ -4,6 +4,10 @@ import os
 from contextlib import contextmanager
 from datetime import datetime
 from typing import Any, List, Optional
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
 
 import psycopg2
 from dotenv import load_dotenv
@@ -37,6 +41,19 @@ def get_connection():
         yield conn
     finally:
         conn.close()
+
+
+def to_local_time(dt: Optional[datetime]) -> Optional[datetime]:
+    """Converte un datetime (assunto UTC se naive) nel fuso orario locale (Europe/Rome)."""
+    if dt is None:
+        return None
+    
+    # Se il datetime è naive (senza timezone), assumiamo sia UTC
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+    
+    # Converti a Europe/Rome
+    return dt.astimezone(ZoneInfo("Europe/Rome"))
 
 
 # =====================
@@ -122,7 +139,7 @@ app = FastAPI(
         "API per leggere i dati del trading agent dal database Postgres: "
         "saldo nel tempo, posizioni aperte, operazioni del bot con full prompt."
     ),
-    version="0.3.1",
+    version="0.3.2",
 )
 
 templates = Jinja2Templates(directory="templates")
@@ -152,7 +169,7 @@ def get_balance() -> List[BalancePoint]:
             rows = cur.fetchall()
 
     return [
-        BalancePoint(timestamp=row[0], balance_usd=float(row[1]))
+        BalancePoint(timestamp=to_local_time(row[0]), balance_usd=float(row[1]))
         for row in rows
     ]
 
@@ -180,7 +197,7 @@ def get_open_positions() -> List[OpenPosition]:
             if not row:
                 return []
             snapshot_id = row[0]
-            snapshot_created_at = row[1]
+            snapshot_created_at = to_local_time(row[1])
 
             # Posizioni aperte per quello snapshot
             cur.execute(
@@ -263,7 +280,7 @@ def get_bot_operations(
         operations.append(
             BotOperation(
                 id=row[0],
-                created_at=row[1],
+                created_at=to_local_time(row[1]),
                 operation=row[2],
                 symbol=row[3],
                 direction=row[4],
@@ -317,7 +334,7 @@ def get_history(
         operations.append(
             BotOperation(
                 id=row[0],
-                created_at=row[1],
+                created_at=to_local_time(row[1]),
                 operation=row[2],
                 symbol=row[3],
                 direction=row[4],
@@ -481,7 +498,7 @@ def get_current_indicators(
 
     return CurrentIndicators(
         ticker=row[0],
-        timestamp=row[1],
+        timestamp=to_local_time(row[1]),
         price=float(row[2]) if row[2] else None,
         ema9=float(row[3]) if row[3] else None,
         ema20=float(row[4]) if row[4] else None,
@@ -613,7 +630,7 @@ def get_last_operations_by_symbol() -> List[BotOperation]:
         operations.append(
             BotOperation(
                 id=row[0],
-                created_at=row[1],
+                created_at=to_local_time(row[1]),
                 operation=row[2],
                 symbol=row[3],
                 direction=row[4],
@@ -701,7 +718,7 @@ async def ui_history(request: Request) -> HTMLResponse:
             row = cur.fetchone()
             if row:
                 current_equity = float(row[0]) if row[0] is not None else None
-                equity_timestamp = row[1]
+                equity_timestamp = to_local_time(row[1])
 
     return templates.TemplateResponse(
         "partials/history_table.html",
