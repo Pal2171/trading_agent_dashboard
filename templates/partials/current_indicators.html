@@ -12,8 +12,8 @@
             {% endif %}
             {% if available_tickers and available_tickers|length > 1 %}
             <select id="tickerSelector" class="ticker-selector" hx-get="/ui/current-indicators"
-                hx-target="#current-indicators-panel" hx-swap="innerHTML" hx-trigger="change" hx-include="this"
-                name="ticker">
+                hx-target="#current-indicators-panel" hx-swap="innerHTML" hx-trigger="change"
+                hx-vals='js:{ticker: document.getElementById("tickerSelector").value}' name="ticker">
                 {% for t in available_tickers %}
                 <option value="{{ t }}" {% if selected_ticker==t or (not selected_ticker and loop.first) %}selected{%
                     endif %}>{{ t }}</option>
