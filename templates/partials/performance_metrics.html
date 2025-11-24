@@ -34,13 +34,21 @@
         {% endif %}
     </div>
 
-    <!-- Box 3: Operazioni Totali -->
+    <!-- Box 3: Win/Loss Metrics -->
     <div class="metric-card">
-        <div class="metric-label">Operazioni Totali</div>
-        <div class="metric-value">{{ metrics.total_operations }}</div>
-        <div class="metric-subvalue text-muted">
-            Buy: {{ metrics.buy_operations }} | Sell: {{ metrics.sell_operations }}
+        <div class="metric-label">Win Rate</div>
+        <div class="metric-value text-success">
+            {% if win_loss %}
+            {{ '{:.1f}'.format(win_loss.win_rate) }}%
+            {% else %}
+            N/A
+            {% endif %}
         </div>
+        {% if win_loss %}
+        <div class="metric-subvalue text-muted">
+            Wins: {{ win_loss.total_wins }} | Losses: {{ win_loss.total_losses }}
+        </div>
+        {% endif %}
     </div>
 
     <!-- Box 4: Max Drawdown -->

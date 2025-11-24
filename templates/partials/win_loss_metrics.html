@@ -1,0 +1,161 @@
+{% if metrics %}
+<div class="win-loss-container">
+    <!-- Win Rate Progress Bar -->
+    <div class="win-rate-section">
+        <div class="win-rate-header">
+            <span class="win-rate-label">WIN RATE</span>
+            <span class="win-rate-value">{{ '%.1f' | format(metrics.win_rate) }}%</span>
+        </div>
+        <div class="progress-bar-container">
+            <div class="progress-bar-fill" style="width: {{ metrics.win_rate }}%;"></div>
+        </div>
+    </div>
+
+    <!-- Wins and Losses Counters -->
+    <div class="counters-section">
+        <div class="counter counter-wins">
+            <span class="counter-dot">●</span>
+            <span class="counter-value">{{ metrics.total_wins }}</span>
+            <span class="counter-label">Wins</span>
+        </div>
+        <div class="counter counter-losses">
+            <span class="counter-dot">●</span>
+            <span class="counter-value">{{ metrics.total_losses }}</span>
+            <span class="counter-label">Losses</span>
+        </div>
+    </div>
+
+    <!-- Total Trades -->
+    <div class="total-trades">
+        <span class="total-label">Totale operazioni chiuse:</span>
+        <span class="total-value">{{ metrics.total_wins + metrics.total_losses }}</span>
+    </div>
+</div>
+
+<style>
+    .win-loss-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        padding: 0.5rem;
+    }
+
+    .win-rate-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .win-rate-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+    }
+
+    .win-rate-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #64748b;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .win-rate-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .progress-bar-container {
+        width: 100%;
+        height: 12px;
+        background: #e2e8f0;
+        border-radius: 9999px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+        border-radius: 9999px;
+        transition: width 0.6s ease;
+    }
+
+    .counters-section {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-start;
+    }
+
+    .counter {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+    }
+
+    .counter-dot {
+        font-size: 1rem;
+        line-height: 1;
+    }
+
+    .counter-wins .counter-dot {
+        color: #10b981;
+    }
+
+    .counter-losses .counter-dot {
+        color: #ef4444;
+    }
+
+    .counter-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #0f172a;
+        min-width: 2rem;
+        text-align: right;
+    }
+
+    .counter-label {
+        font-size: 0.875rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    .total-trades {
+        padding-top: 0.75rem;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .total-label {
+        font-size: 0.85rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    .total-value {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    @media (max-width: 768px) {
+        .win-rate-value {
+            font-size: 1.25rem;
+        }
+        
+        .counter-value {
+            font-size: 1.1rem;
+        }
+    }
+</style>
+
+{% else %}
+<div style="padding: 2rem; text-align: center; color: #64748b;">
+    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+    <p style="font-size: 0.9rem; margin: 0;">Nessun dato disponibile</p>
+</div>
+{% endif %}

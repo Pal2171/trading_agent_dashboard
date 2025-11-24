@@ -128,6 +128,25 @@ class RiskMetrics(BaseModel):
     largest_position_pct: Optional[float]
 
 
+class ClosedTrade(BaseModel):
+    symbol: str
+    side: str
+    entry_price: float
+    exit_price: Optional[float]
+    pnl_usd: float
+    open_time: datetime
+    close_time: datetime
+    motivation: Optional[str]
+
+
+class WinLossMetrics(BaseModel):
+    win_rate: float
+    total_wins: int
+    total_losses: int
+    total_pnl_usd: float
+    trades: List[ClosedTrade]
+
+
 # =====================
 # App FastAPI + Template Jinja2
 # =====================
@@ -444,7 +463,7 @@ def get_current_indicators(
                         ema9,
                         ema20,
                         ema21,
-                        supertrend,
+                        supertrend_1h,
                         adx,
                         macd,
                         rsi_7,
@@ -467,7 +486,7 @@ def get_current_indicators(
                         ema9,
                         ema20,
                         ema21,
-                        supertrend,
+                        supertrend_1h,
                         adx,
                         macd,
                         rsi_7,
@@ -512,136 +531,139 @@ def get_current_indicators(
     )
 
 
-@app.get("/risk-metrics", response_model=RiskMetrics)
-def get_risk_metrics() -> RiskMetrics:
-    """Restituisce metriche di rischio basate sulle posizioni aperte."""
+    return operations
 
+
+def calculate_closed_trades_logic() -> WinLossMetrics:
+    """Calcola le posizioni chiuse confrontando gli snapshot."""
+    
     with get_connection() as conn:
         with conn.cursor() as cur:
-            # Ultimo snapshot
-            cur.execute(
-                """
-                SELECT id, balance_usd
-                FROM account_snapshots
-                ORDER BY created_at DESC
-                LIMIT 1;
-                """
-            )
-            snapshot_row = cur.fetchone()
+            # 1. Recupera tutti gli snapshot ordinati
+            cur.execute("SELECT id, created_at FROM account_snapshots ORDER BY created_at ASC")
+            snapshots = cur.fetchall()
             
-            if not snapshot_row:
-                return RiskMetrics(
-                    total_exposure_usd=0.0,
-                    total_positions=0,
-                    long_positions=0,
-                    short_positions=0,
-                    avg_leverage=None,
-                    largest_position_pct=None,
-                )
+            if not snapshots:
+                return WinLossMetrics(win_rate=0, total_wins=0, total_losses=0, total_pnl_usd=0, trades=[])
 
-            snapshot_id = snapshot_row[0]
-            balance = float(snapshot_row[1]) if snapshot_row[1] else 0.0
+            # 2. Recupera tutte le posizioni aperte
+            cur.execute("""
+                SELECT snapshot_id, symbol, side, size, entry_price, mark_price, pnl_usd 
+                FROM open_positions 
+                ORDER BY snapshot_id ASC
+            """)
+            all_positions = cur.fetchall()
+            
+            # 3. Recupera operazioni CLOSE per le motivazioni
+            cur.execute("""
+                SELECT bo.created_at, bo.symbol, bo.direction, ac.system_prompt, bo.raw_payload
+                FROM bot_operations bo
+                LEFT JOIN ai_contexts ac ON bo.context_id = ac.id
+                WHERE bo.operation = 'CLOSE'
+                ORDER BY bo.created_at ASC
+            """)
+            close_ops = cur.fetchall()
 
-            # Statistiche posizioni
-            try:
-                cur.execute(
-                    """
-                    SELECT 
-                        COUNT(*) as total,
-                        COUNT(CASE WHEN side ILIKE 'long' THEN 1 END) as longs,
-                        COUNT(CASE WHEN side ILIKE 'short' THEN 1 END) as shorts,
-                        SUM(ABS(size * COALESCE(mark_price, entry_price, 0))) as total_exposure,
-                        MAX(ABS(size * COALESCE(mark_price, entry_price, 0))) as largest_pos
-                    FROM open_positions
-                    WHERE snapshot_id = %s;
-                    """,
-                    (snapshot_id,),
-                )
-                pos_row = cur.fetchone()
-            except Exception as e:
-                print(f"Error in risk metrics query: {e}")
-                pos_row = (0, 0, 0, 0.0, 0.0)
+    # Organizza posizioni per snapshot
+    positions_by_snapshot = {}
+    for pos in all_positions:
+        snap_id = pos[0]
+        if snap_id not in positions_by_snapshot:
+            positions_by_snapshot[snap_id] = []
+        positions_by_snapshot[snap_id].append({
+            'symbol': pos[1],
+            'side': pos[2],
+            'size': float(pos[3]),
+            'entry_price': float(pos[4]) if pos[4] else 0,
+            'mark_price': float(pos[5]) if pos[5] else 0,
+            'pnl_usd': float(pos[6]) if pos[6] else 0
+        })
 
-    total_positions = pos_row[0] if pos_row else 0
-    long_positions = pos_row[1] if pos_row else 0
-    short_positions = pos_row[2] if pos_row else 0
-    total_exposure = float(pos_row[3]) if pos_row and pos_row[3] else 0.0
-    largest_position = float(pos_row[4]) if pos_row and pos_row[4] else 0.0
-    avg_leverage = None  # Rimosso calcolo problematico
+    closed_trades = []
+    
+    # Itera sugli snapshot per trovare quando una posizione sparisce
+    for i in range(len(snapshots) - 1):
+        curr_snap_id = snapshots[i][0]
+        next_snap_id = snapshots[i+1][0]
+        curr_time = snapshots[i][1]
+        next_time = snapshots[i+1][1]
+        
+        curr_pos_list = positions_by_snapshot.get(curr_snap_id, [])
+        next_pos_list = positions_by_snapshot.get(next_snap_id, [])
+        
+        # Crea mappa per lookup rapido nel prossimo snapshot
+        next_pos_map = {(p['symbol'], p['side']): p for p in next_pos_list}
+        
+        for pos in curr_pos_list:
+            key = (pos['symbol'], pos['side'])
+            if key not in next_pos_map:
+                # La posizione è sparita -> CHIUSA
+                # Cerca motivazione nel range temporale [curr_time, next_time + buffer]
+                motivation = "Chiusura rilevata da snapshot"
+                
+                # Cerca l'operazione CLOSE più vicina
+                best_match = None
+                min_diff = float('inf')
+                
+                for op in close_ops:
+                    op_time = op[0]
+                    op_symbol = op[1]
+                    # op_direction è solitamente 'LONG' o 'SHORT' che indica cosa si sta chiudendo, o la direzione del trade?
+                    # Assumiamo che se chiudo un LONG, direction potrebbe essere null o specificata.
+                    # Controlliamo solo symbol e tempo per ora.
+                    
+                    if op_symbol == pos['symbol'] and curr_time <= op_time <= (next_time + (next_time - curr_time)):
+                        # Trovato un close compatibile temporalmente
+                        diff = abs((op_time - next_time).total_seconds())
+                        if diff < min_diff:
+                            min_diff = diff
+                            best_match = op
+                
+                if best_match:
+                    # Usa system prompt o raw payload come motivazione
+                    # best_match[3] è system_prompt, best_match[4] è raw_payload
+                    if best_match[3]:
+                        motivation = best_match[3][:100] + "..." # Tronca per brevità
+                    else:
+                        motivation = "Decisione AI (prompt mancante)"
 
-    largest_position_pct = None
-    if balance > 0 and largest_position > 0:
-        largest_position_pct = (largest_position / balance) * 100
+                closed_trades.append(ClosedTrade(
+                    symbol=pos['symbol'],
+                    side=pos['side'],
+                    entry_price=pos['entry_price'],
+                    exit_price=pos['mark_price'], # Stima con ultimo mark price
+                    pnl_usd=pos['pnl_usd'], # Stima con ultimo PnL non realizzato
+                    open_time=to_local_time(curr_time), # Approssimazione
+                    close_time=to_local_time(next_time),
+                    motivation=motivation
+                ))
 
-    return RiskMetrics(
-        total_exposure_usd=total_exposure,
-        total_positions=total_positions,
-        long_positions=long_positions,
-        short_positions=short_positions,
-        avg_leverage=avg_leverage,
-        largest_position_pct=largest_position_pct,
+    # Calcola metriche
+    wins = [t for t in closed_trades if t.pnl_usd > 0]
+    losses = [t for t in closed_trades if t.pnl_usd <= 0]
+    
+    total_wins = len(wins)
+    total_losses = len(losses)
+    total_trades = total_wins + total_losses
+    win_rate = (total_wins / total_trades * 100) if total_trades > 0 else 0.0
+    total_pnl = sum(t.pnl_usd for t in closed_trades)
+    
+    # Ordina trades per data chiusura decrescente
+    closed_trades.sort(key=lambda x: x.close_time, reverse=True)
+
+    return WinLossMetrics(
+        win_rate=win_rate,
+        total_wins=total_wins,
+        total_losses=total_losses,
+        total_pnl_usd=total_pnl,
+        trades=closed_trades
     )
 
 
-@app.get("/last-operations-by-symbol", response_model=List[BotOperation])
-def get_last_operations_by_symbol() -> List[BotOperation]:
-    """Restituisce l'ultima operazione (incluso HOLD) per ogni symbol/valuta."""
-
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            # Query per ottenere l'ultima operazione per ogni symbol
-            cur.execute(
-                """
-                WITH ranked_ops AS (
-                    SELECT
-                        bo.id,
-                        bo.created_at,
-                        bo.operation,
-                        bo.symbol,
-                        bo.direction,
-                        bo.target_portion_of_balance,
-                        bo.leverage,
-                        bo.raw_payload,
-                        ac.system_prompt,
-                        ROW_NUMBER() OVER (PARTITION BY bo.symbol ORDER BY bo.created_at DESC) as rn
-                    FROM bot_operations AS bo
-                    LEFT JOIN ai_contexts AS ac ON bo.context_id = ac.id
-                    WHERE bo.symbol IS NOT NULL
-                )
-                SELECT
-                    id,
-                    created_at,
-                    operation,
-                    symbol,
-                    direction,
-                    target_portion_of_balance,
-                    leverage,
-                    raw_payload,
-                    system_prompt
-                FROM ranked_ops
-                WHERE rn = 1
-                ORDER BY symbol ASC;
-                """
-            )
-            rows = cur.fetchall()
-
-    operations: List[BotOperation] = []
-    for row in rows:
-        operations.append(
-            BotOperation(
-                id=row[0],
-                created_at=to_local_time(row[1]),
-                operation=row[2],
-                symbol=row[3],
-                direction=row[4],
-                target_portion_of_balance=float(row[5]) if row[5] is not None else None,
-                leverage=float(row[6]) if row[6] is not None else None,
-                raw_payload=row[7],
-                system_prompt=row[8],
-            )
-        )
-
-    return operations
+@app.get("/win-loss-metrics", response_model=WinLossMetrics)
+def get_win_loss_metrics() -> WinLossMetrics:
+    """Restituisce metriche sulle operazioni chiuse (stimate)."""
+    return calculate_closed_trades_logic()
 
 
 # =====================
@@ -699,8 +721,9 @@ async def history_page(request: Request) -> HTMLResponse:
 
 @app.get("/ui/history", response_class=HTMLResponse)
 async def ui_history(request: Request) -> HTMLResponse:
-    """Partial HTML per la tabella storico."""
-    operations = get_history(limit=100)
+    """Partial HTML per la tabella storico (Closed Trades)."""
+    metrics = calculate_closed_trades_logic()
+    trades = metrics.trades
 
     # Recupera equity corrente (ultimo balance registrato)
     current_equity: Optional[float] = None
@@ -724,7 +747,7 @@ async def ui_history(request: Request) -> HTMLResponse:
         "partials/history_table.html",
         {
             "request": request,
-            "operations": operations,
+            "operations": trades, # Passa i ClosedTrade invece di BotOperation
             "equity": current_equity,
             "equity_ts": equity_timestamp,
         },
@@ -735,9 +758,10 @@ async def ui_history(request: Request) -> HTMLResponse:
 async def ui_performance_metrics(request: Request) -> HTMLResponse:
     """Partial HTML per le metriche di performance."""
     metrics = get_performance_metrics()
+    win_loss = get_win_loss_metrics()
     return templates.TemplateResponse(
         "partials/performance_metrics.html",
-        {"request": request, "metrics": metrics},
+        {"request": request, "metrics": metrics, "win_loss": win_loss},
     )
 
 
@@ -774,12 +798,12 @@ async def ui_current_indicators(
     )
 
 
-@app.get("/ui/risk-metrics", response_class=HTMLResponse)
-async def ui_risk_metrics(request: Request) -> HTMLResponse:
-    """Partial HTML per le metriche di rischio."""
-    metrics = get_risk_metrics()
+@app.get("/ui/win-loss-metrics", response_class=HTMLResponse)
+async def ui_win_loss_metrics(request: Request) -> HTMLResponse:
+    """Partial HTML per le metriche Win/Loss."""
+    metrics = get_win_loss_metrics()
     return templates.TemplateResponse(
-        "partials/risk_metrics.html",
+        "partials/win_loss_metrics.html",
         {"request": request, "metrics": metrics},
     )
 

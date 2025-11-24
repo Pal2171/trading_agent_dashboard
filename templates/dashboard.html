@@ -27,7 +27,7 @@
         </div>
     </article>
 
-    <!-- 3. Current Market Indicators & Risk Metrics Grid -->
+    <!-- 3. Current Market Indicators & Win/Loss Metrics Grid -->
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
         <!-- Current Indicators -->
         <article class="card">
@@ -41,14 +41,14 @@
             </div>
         </article>
 
-        <!-- Risk Metrics -->
+        <!-- Win/Loss Metrics -->
         <article class="card">
             <div style="margin-bottom: 1rem;">
-                <h2>⚠️ Gestione del Rischio</h2>
-                <p class="card-subtitle">Metriche di esposizione e bilanciamento posizioni.</p>
+                <h2>🎯 Operazioni Vinte/Perse</h2>
+                <p class="card-subtitle">Statistiche sulle operazioni chiuse.</p>
             </div>
-            <div id="risk-metrics-panel" hx-get="/ui/risk-metrics" hx-trigger="load, every 30s">
-                <div aria-busy="true">Caricamento metriche rischio...</div>
+            <div id="win-loss-metrics-panel" hx-get="/ui/win-loss-metrics" hx-trigger="load, every 30s">
+                <div aria-busy="true">Caricamento metriche...</div>
             </div>
         </article>
     </div>

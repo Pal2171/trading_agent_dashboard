@@ -1,5 +1,5 @@
 {% if operations %}
-<!-- History Wrapper + Equity Bar with compact toggle -->
+<!-- History Wrapper + Equity Bar -->
 <div class="history-wrapper">
     <div class="equity-bar">
         <div class="equity-left">
@@ -13,154 +13,73 @@
             {% if equity_ts %}
             <span class="equity-meta">Aggiornato: {{ equity_ts.strftime('%d/%m/%Y %H:%M') }}</span>
             {% endif %}
-            <div class="view-toggle">
-                <label class="toggle">
-                    <input type="checkbox" id="compactToggle" />
-                    <span class="toggle-slider" aria-hidden="true"></span>
-                    <span class="toggle-label">Compatta</span>
-                </label>
-            </div>
         </div>
     </div>
 
-<!-- Operations Table -->
-<div class="history-table-container">
-    <table class="history-table">
-        <thead>
-            <tr>
-                <th>Data/Ora</th>
-                <th>Operazione</th>
-                <th>Simbolo</th>
-                <th>Direzione</th>
-                <th>Leva</th>
-                <th>Target %</th>
-                <th>Motivazione</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for op in operations %}
-            <tr class="operation-row {% if op.operation|lower in ['open', 'buy'] %}row-open{% elif op.operation|lower in ['close', 'sell'] %}row-close{% endif %}">
-                <td class="time-col">
-                    <div class="time-main">{{ op.created_at.strftime('%d/%m/%Y') }}</div>
-                    <div class="time-sub">{{ op.created_at.strftime('%H:%M:%S') }}</div>
-                </td>
-                <td class="operation-col">
-                    <span class="operation-badge {% if op.operation|lower in ['open', 'buy'] %}badge-open{% elif op.operation|lower in ['close', 'sell'] %}badge-close{% endif %}">
-                        {% if op.operation|lower in ['open', 'buy'] %}
-                        🔓 {{ op.operation|upper }}
-                        {% elif op.operation|lower in ['close', 'sell'] %}
-                        🔒 {{ op.operation|upper }}
+    <!-- Operations Table -->
+    <div class="history-table-container">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Symbol</th>
+                    <th>Side</th>
+                    <th>Entry</th>
+                    <th>Exit</th>
+                    <th>P/L ($)</th>
+                    <th>P/L (%)</th>
+                    <th>Data Chiusura</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trade in operations %}
+                {% set pnl_pct = ((trade.exit_price - trade.entry_price) / trade.entry_price * 100) if trade.exit_price
+                and trade.entry_price else 0 %}
+                {% if trade.side|lower == 'short' %}
+                {% set pnl_pct = -pnl_pct %}
+                {% endif %}
+                <tr class="trade-row {% if trade.pnl_usd > 0 %}row-win{% else %}row-loss{% endif %}">
+                    <td class="symbol-col">
+                        <strong>{{ trade.symbol }}</strong>
+                    </td>
+                    <td class="side-col">
+                        <span
+                            class="side-badge {% if trade.side|lower == 'long' %}badge-long{% else %}badge-short{% endif %}">
+                            {% if trade.side|lower == 'long' %}📈{% else %}📉{% endif %} {{ trade.side|upper }}
+                        </span>
+                    </td>
+                    <td class="price-col">
+                        ${{ '{:,.2f}'.format(trade.entry_price) }}
+                    </td>
+                    <td class="price-col">
+                        {% if trade.exit_price %}
+                        ${{ '{:,.2f}'.format(trade.exit_price) }}
                         {% else %}
-                        {{ op.operation|upper }}
+                        <span class="text-muted">N/A</span>
                         {% endif %}
-                    </span>
-                </td>
-                <td class="symbol-col">
-                    <strong>{{ op.symbol or '-' }}</strong>
-                </td>
-                <td class="direction-col">
-                    {% if op.direction %}
-                    <span class="direction-badge {% if op.direction|lower == 'long' %}badge-long{% elif op.direction|lower == 'short' %}badge-short{% endif %}">
-                        {% if op.direction|lower == 'long' %}📈{% else %}📉{% endif %} {{ op.direction|upper }}
-                    </span>
-                    {% else %}
-                    <span class="text-muted">-</span>
-                    {% endif %}
-                </td>
-                <td class="leverage-col">
-                    {% if op.leverage %}
-                    <span class="leverage-badge">{{ op.leverage }}x</span>
-                    {% else %}
-                    <span class="text-muted">-</span>
-                    {% endif %}
-                </td>
-                <td class="target-col">
-                    {% if op.target_portion_of_balance is not none %}
-                    {{ '%.1f' | format(op.target_portion_of_balance * 100) }}%
-                    {% else %}
-                    <span class="text-muted">-</span>
-                    {% endif %}
-                </td>
-                <td class="motivation-col">
-                    {% set reason = op.raw_payload.get('reason') or op.raw_payload.get('motivation') or op.raw_payload.get('comment') %}
-                    {% if reason %}
-                    <details class="motivation-details">
-                        <summary class="motivation-summary">📄 Leggi motivazione</summary>
-                        <div class="motivation-content">
-                            {{ reason }}
-                        </div>
-                    </details>
-                    {% else %}
-                    <span class="text-muted">N/A</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+                    </td>
+                    <td class="pnl-col">
+                        <span class="pnl-badge {% if trade.pnl_usd > 0 %}pnl-positive{% else %}pnl-negative{% endif %}">
+                            {% if trade.pnl_usd > 0 %}+{% endif %}${{ '{:,.2f}'.format(trade.pnl_usd) }}
+                        </span>
+                    </td>
+                    <td class="pnl-pct-col">
+                        <span class="pnl-pct-badge {% if pnl_pct > 0 %}pnl-positive{% else %}pnl-negative{% endif %}">
+                            {% if pnl_pct > 0 %}+{% endif %}{{ '{:.2f}'.format(pnl_pct) }}%
+                        </span>
+                    </td>
+                    <td class="time-col">
+                        <div class="time-main">{{ trade.close_time.strftime('%d/%m/%Y') }}</div>
+                        <div class="time-sub">{{ trade.close_time.strftime('%H:%M') }}</div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
 </div>
-
-<script>
-(function() {
-  try {
-    const script = document.currentScript;
-    let root = script.previousElementSibling;
-    while (root && !root.classList.contains('history-wrapper')) {
-      root = root.previousElementSibling;
-    }
-    if (!root) return;
-
-    const toggle = root.querySelector('#compactToggle');
-    if (!toggle) return;
-
-    const key = 'historyCompactMode';
-
-    function apply(state) {
-      if (state) {
-        root.classList.add('compact-mode');
-        toggle.checked = true;
-      } else {
-        root.classList.remove('compact-mode');
-        toggle.checked = false;
-      }
-    }
-
-    const saved = localStorage.getItem(key);
-    apply(saved === '1');
-
-    toggle.addEventListener('change', () => {
-      const on = toggle.checked;
-      localStorage.setItem(key, on ? '1' : '0');
-      apply(on);
-    });
-  } catch (e) {
-    console.error('Compact toggle error:', e);
-  }
-})();
-</script>
 
 <style>
-    /* Toggle styles */
-    .toggle { display: inline-flex; align-items: center; gap: .5rem; cursor: pointer; user-select: none; }
-    .toggle input { display: none; }
-    .toggle-slider { width: 38px; height: 22px; background: #e2e8f0; border-radius: 9999px; position: relative; transition: all .2s; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04); }
-    .toggle-slider::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: #fff; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.12); transition: transform .2s ease; }
-    .toggle input:checked + .toggle-slider { background: #0ea5e9; }
-    .toggle input:checked + .toggle-slider::after { transform: translateX(16px); }
-    .toggle-label { color: #334155; font-size: .8rem; font-weight: 600; }
-
-    /* Compact mode adjustments */
-    .history-wrapper.compact-mode .history-table { border-spacing: 0 6px; font-size: 0.8rem; }
-    .history-wrapper.compact-mode .history-table th { padding: 0.5rem 0.65rem; font-size: 0.65rem; }
-    .history-wrapper.compact-mode .history-table td { padding: 0.5rem 0.65rem; }
-    .history-wrapper.compact-mode .time-sub { display: none; }
-    .history-wrapper.compact-mode .operation-badge,
-    .history-wrapper.compact-mode .direction-badge,
-    .history-wrapper.compact-mode .leverage-badge { padding: 0.2rem 0.5rem; font-size: 0.75rem; }
-    .history-wrapper.compact-mode .motivation-summary { font-size: 0.8rem; padding: 0.35rem 0.55rem; }
-
     .equity-bar {
         display: flex;
         justify-content: space-between;
@@ -172,11 +91,37 @@
         background: #ffffff;
         margin-bottom: 1rem;
     }
-    .equity-left { display: flex; align-items: baseline; gap: 0.5rem; }
-    .equity-label { color: #64748b; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
-    .equity-value { color: #0f172a; font-weight: 700; font-size: 1.1rem; }
-    .equity-right { display: flex; gap: .75rem; flex-wrap: wrap; }
-    .equity-meta { color: #475569; font-size: 0.8rem; }
+
+    .equity-left {
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+    }
+
+    .equity-label {
+        color: #64748b;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
+    .equity-value {
+        color: #0f172a;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+
+    .equity-right {
+        display: flex;
+        gap: .75rem;
+        flex-wrap: wrap;
+    }
+
+    .equity-meta {
+        color: #475569;
+        font-size: 0.8rem;
+    }
 
     .history-table-container {
         overflow-x: auto;
@@ -215,7 +160,7 @@
         background: #ffffff !important;
         border: 1px solid #e5e7eb;
         border-radius: 12px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
     }
 
     .history-table td {
@@ -226,30 +171,93 @@
         vertical-align: middle;
     }
 
-    .history-table tbody tr td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
-    .history-table tbody tr td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+    .history-table tbody tr td:first-child {
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+    }
 
-    .operation-row {
+    .history-table tbody tr td:last-child {
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
+    }
+
+    .trade-row {
         transition: box-shadow 0.2s, transform 0.05s;
         background: #ffffff !important;
     }
 
-    .operation-row:hover {
+    .trade-row:hover {
         box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
     }
 
-    .row-open {
+    .row-win {
         border-left: 4px solid #10b981;
         background: #ffffff !important;
     }
 
-    .row-close {
+    .row-loss {
         border-left: 4px solid #ef4444;
         background: #ffffff !important;
     }
 
+    .symbol-col strong {
+        font-size: 0.9rem;
+        color: #1e293b;
+    }
+
+    .side-badge {
+        display: inline-block;
+        padding: 0.25rem 0.6rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+        background: #fff;
+    }
+
+    .badge-long {
+        color: #0f766e;
+        background: #f0fdfa;
+        border-color: #99f6e4;
+    }
+
+    .badge-short {
+        color: #b91c1c;
+        background: #fef2f2;
+        border-color: #fecaca;
+    }
+
+    .price-col {
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+        color: #475569;
+    }
+
+    .pnl-badge,
+    .pnl-pct-badge {
+        display: inline-block;
+        padding: 0.35rem 0.7rem;
+        border-radius: 0.5rem;
+        font-weight: 700;
+        font-size: 0.85rem;
+        font-family: 'Courier New', monospace;
+    }
+
+    .pnl-positive {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #86efac;
+    }
+
+    .pnl-negative {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fca5a5;
+    }
+
     .time-col {
-        min-width: 120px;
+        min-width: 100px;
     }
 
     .time-main {
@@ -262,90 +270,6 @@
         font-size: 0.75rem;
         color: #64748b;
         margin-top: 0.15rem;
-    }
-
-    .operation-badge {
-        display: inline-block;
-        padding: 0.3rem 0.6rem;
-        border-radius: 9999px;
-        font-weight: 600;
-        font-size: 0.8rem;
-        border: 1px solid #e2e8f0;
-        color: #334155;
-        background: #fff;
-    }
-
-    .badge-open {
-        color: #0f766e;
-    }
-
-    .badge-close {
-        color: #b91c1c;
-    }
-
-    .symbol-col strong {
-        font-size: 0.9rem;
-        color: #1e293b;
-    }
-
-    .direction-badge {
-        display: inline-block;
-        padding: 0.25rem 0.6rem;
-        border-radius: 9999px;
-        font-weight: 600;
-        font-size: 0.8rem;
-        border: 1px solid #e2e8f0;
-        color: #334155;
-        background: #fff;
-    }
-
-    .leverage-badge {
-        display: inline-block;
-        background: #fff;
-        color: #334155;
-        padding: 0.25rem 0.55rem;
-        border-radius: 0.375rem;
-        border: 1px solid #e2e8f0;
-        font-weight: 600;
-        font-size: 0.8rem;
-    }
-
-    .motivation-details {
-        cursor: pointer;
-    }
-
-    .motivation-summary {
-        color: #0f172a;
-        font-weight: 500;
-        font-size: 0.85rem;
-        cursor: pointer;
-        list-style: none;
-        padding: 0.45rem 0.7rem;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.5rem;
-        transition: all 0.2s;
-    }
-
-    .motivation-summary:hover {
-        background: #f8fafc;
-    }
-
-    .motivation-summary::-webkit-details-marker {
-        display: none;
-    }
-
-    .motivation-content {
-        margin-top: 0.75rem;
-        padding: 1rem;
-        background: #f8fafc;
-        border-left: 3px solid #94a3b8;
-        border-radius: 0.5rem;
-        font-size: 0.85rem;
-        line-height: 1.6;
-        color: #334155;
-        white-space: pre-wrap;
-        max-width: 500px;
     }
 
     .text-muted {
@@ -366,9 +290,10 @@
 </style>
 
 {% else %}
-<div style="padding: 3rem; text-align: center; color: #64748b; background: #f8fafc; border-radius: 0.75rem; border: 1px solid #e2e8f0;">
+<div
+    style="padding: 3rem; text-align: center; color: #64748b; background: #f8fafc; border-radius: 0.75rem; border: 1px solid #e2e8f0;">
     <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
-    <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">Nessuna operazione nello storico</p>
-    <p style="font-size: 0.9rem;">Il bot non ha ancora eseguito operazioni di trading.</p>
+    <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">Nessuna operazione chiusa</p>
+    <p style="font-size: 0.9rem;">Non ci sono ancora operazioni chiuse da visualizzare.</p>
 </div>
 {% endif %}
