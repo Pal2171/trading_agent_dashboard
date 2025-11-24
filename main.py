@@ -660,6 +660,67 @@ def calculate_closed_trades_logic() -> WinLossMetrics:
     )
 
 
+@app.get("/last-operations-by-symbol", response_model=List[BotOperation])
+def get_last_operations_by_symbol() -> List[BotOperation]:
+    """Restituisce l'ultima operazione (incluso HOLD) per ogni symbol/valuta."""
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            # Query per ottenere l'ultima operazione per ogni symbol
+            cur.execute(
+                """
+                WITH ranked_ops AS (
+                    SELECT
+                        bo.id,
+                        bo.created_at,
+                        bo.operation,
+                        bo.symbol,
+                        bo.direction,
+                        bo.target_portion_of_balance,
+                        bo.leverage,
+                        bo.raw_payload,
+                        ac.system_prompt,
+                        ROW_NUMBER() OVER (PARTITION BY bo.symbol ORDER BY bo.created_at DESC) as rn
+                    FROM bot_operations AS bo
+                    LEFT JOIN ai_contexts AS ac ON bo.context_id = ac.id
+                    WHERE bo.symbol IS NOT NULL
+                )
+                SELECT
+                    id,
+                    created_at,
+                    operation,
+                    symbol,
+                    direction,
+                    target_portion_of_balance,
+                    leverage,
+                    raw_payload,
+                    system_prompt
+                FROM ranked_ops
+                WHERE rn = 1
+                ORDER BY symbol ASC;
+                """
+            )
+            rows = cur.fetchall()
+
+    operations: List[BotOperation] = []
+    for row in rows:
+        operations.append(
+            BotOperation(
+                id=row[0],
+                created_at=to_local_time(row[1]),
+                operation=row[2],
+                symbol=row[3],
+                direction=row[4],
+                target_portion_of_balance=float(row[5]) if row[5] is not None else None,
+                leverage=float(row[6]) if row[6] is not None else None,
+                raw_payload=row[7],
+                system_prompt=row[8],
+            )
+        )
+
+    return operations
+
+
 @app.get("/win-loss-metrics", response_model=WinLossMetrics)
 def get_win_loss_metrics() -> WinLossMetrics:
     """Restituisce metriche sulle operazioni chiuse (stimate)."""
