@@ -19,10 +19,15 @@
                     {{ op.operation|upper }}
                     {% endif %}
                 </span>
-                {% if op.direction %}
-                <span
-                    class="direction-badge {% if op.direction|lower == 'long' %}badge-long{% elif op.direction|lower == 'short' %}badge-short{% endif %}">
-                    {% if op.direction|lower == 'long' %}📈{% else %}📉{% endif %} {{ op.direction|upper }}
+                {# Badge direzione: usa posizione aperta se presente, altrimenti direction dell'operazione #}
+                {% set current_pos = open_pos_map.get(op.symbol) %}
+                {% if current_pos %}
+                <span class="direction-badge {% if current_pos.side|lower == 'long' %}badge-long{% elif current_pos.side|lower == 'short' %}badge-short{% endif %}">
+                    {% if current_pos.side|lower == 'long' %}📈 LONG{% else %}📉 SHORT{% endif %}
+                </span>
+                {% elif op.direction %}
+                <span class="direction-badge {% if op.direction|lower == 'long' %}badge-long{% elif op.direction|lower == 'short' %}badge-short{% endif %}">
+                    {% if op.direction|lower == 'long' %}📈 LONG{% else %}📉 SHORT{% endif %}
                 </span>
                 {% endif %}
             </div>

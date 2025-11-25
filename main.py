@@ -163,6 +163,17 @@ app = FastAPI(
 
 templates = Jinja2Templates(directory="templates")
 
+# Filtro Jinja per formattare decimali con separatore "," e numero di decimali personalizzabile
+def format_decimal(value, decimals: int = 4):
+    try:
+        if value is None:
+            return "-"
+        return f"{float(value):.{decimals}f}".replace('.', ',')
+    except Exception:
+        return value
+
+templates.env.filters['format_decimal'] = format_decimal
+
 
 # =====================
 # Endpoint API JSON
@@ -627,13 +638,25 @@ def calculate_closed_trades_logic() -> WinLossMetrics:
                     else:
                         motivation = "Decisione AI (prompt mancante)"
 
+                # Ricalcolo PnL coerente con direzione (long/short)
+                entry_price = pos['entry_price']
+                exit_price = pos['mark_price']
+                size = pos['size']
+                pnl_usd = 0.0
+                if entry_price and exit_price and size:
+                    price_diff = exit_price - entry_price
+                    # Se short, profit quando exit < entry -> inverti segno
+                    if pos['side'] and pos['side'].lower() == 'short':
+                        price_diff = -price_diff
+                    pnl_usd = price_diff * size
+
                 closed_trades.append(ClosedTrade(
                     symbol=pos['symbol'],
                     side=pos['side'],
-                    entry_price=pos['entry_price'],
-                    exit_price=pos['mark_price'], # Stima con ultimo mark price
-                    pnl_usd=pos['pnl_usd'], # Stima con ultimo PnL non realizzato
-                    open_time=to_local_time(curr_time), # Approssimazione
+                    entry_price=entry_price,
+                    exit_price=exit_price,
+                    pnl_usd=pnl_usd,
+                    open_time=to_local_time(curr_time),
                     close_time=to_local_time(next_time),
                     motivation=motivation
                 ))
@@ -873,9 +896,16 @@ async def ui_win_loss_metrics(request: Request) -> HTMLResponse:
 async def ui_last_operations_by_symbol(request: Request) -> HTMLResponse:
     """Partial HTML per le ultime operazioni AI per symbol."""
     operations = get_last_operations_by_symbol()
+    # Mappa posizioni aperte per symbol per mostrare LONG/SHORT anche se ultimo segnale è HOLD
+    open_positions = get_open_positions()
+    open_pos_map = {p.symbol: {"side": p.side} for p in open_positions}
     return templates.TemplateResponse(
         "partials/last_operations_by_symbol.html",
-        {"request": request, "operations": operations},
+        {
+            "request": request,
+            "operations": operations,
+            "open_pos_map": open_pos_map,
+        },
     )
 
 

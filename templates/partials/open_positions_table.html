@@ -52,7 +52,7 @@
                     -
                     {% endif %}
                 </td>
-                <td style="font-family: monospace;">{{ '%.4f' | format(pos.size) }}</td>
+                <td style="font-family: monospace;">{{ pos.size | format_decimal(4) }}</td>
                 <td style="font-family: monospace;">${{ '%.2f' | format(pos.entry_price) if pos.entry_price else '-' }}</td>
                 <td style="font-family: monospace; font-weight: 600;">${{ '%.2f' | format(pos.mark_price) if pos.mark_price else '-' }}</td>
                 <td>
