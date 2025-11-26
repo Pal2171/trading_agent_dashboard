@@ -27,31 +27,16 @@
         </div>
     </article>
 
-    <!-- 3. Current Market Indicators & Win/Loss Metrics Grid -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-        <!-- Current Indicators -->
-        <article class="card">
-            <div style="margin-bottom: 1rem;">
-                <h2>📈 Indicatori di Mercato</h2>
-                <p class="card-subtitle">Ultimi indicatori tecnici disponibili.</p>
-            </div>
-            <div id="current-indicators-panel" hx-get="/ui/current-indicators" hx-trigger="load, every 30s"
-                hx-swap="innerHTML">
-                <div aria-busy="true">Caricamento indicatori...</div>
-            </div>
-        </article>
-
-        <!-- Win/Loss Metrics -->
-        <article class="card">
-            <div style="margin-bottom: 1rem;">
-                <h2>🎯 Operazioni Vinte/Perse</h2>
-                <p class="card-subtitle">Statistiche sulle operazioni chiuse.</p>
-            </div>
-            <div id="win-loss-metrics-panel" hx-get="/ui/win-loss-metrics" hx-trigger="load, every 30s">
-                <div aria-busy="true">Caricamento metriche...</div>
-            </div>
-        </article>
-    </div>
+    <!-- 3. Win/Loss Metrics -->
+    <article class="card">
+        <div style="margin-bottom: 1rem;">
+            <h2>🎯 Operazioni Vinte/Perse</h2>
+            <p class="card-subtitle">Statistiche sulle operazioni chiuse.</p>
+        </div>
+        <div id="win-loss-metrics-panel" hx-get="/ui/win-loss-metrics" hx-trigger="load, every 30s">
+            <div aria-busy="true">Caricamento metriche...</div>
+        </div>
+    </article>
 
     <!-- 3.5. Last AI Operations Carousel -->
     <article class="card">

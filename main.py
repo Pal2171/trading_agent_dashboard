@@ -693,11 +693,27 @@ def calculate_closed_trades_logic() -> WinLossMetrics:
 
 @app.get("/last-operations-by-symbol", response_model=List[BotOperation])
 def get_last_operations_by_symbol() -> List[BotOperation]:
-    """Restituisce l'ultima operazione (incluso HOLD) per ogni symbol/valuta."""
+    """Restituisce l'ultima operazione (incluso HOLD) solo per symbol con posizioni aperte."""
 
     with get_connection() as conn:
         with conn.cursor() as cur:
-            # Query per ottenere l'ultima operazione per ogni symbol
+            # Prima ottieni i symbol con posizioni aperte dall'ultimo snapshot
+            cur.execute(
+                """
+                SELECT DISTINCT op.symbol
+                FROM open_positions op
+                INNER JOIN (
+                    SELECT id FROM account_snapshots
+                    ORDER BY created_at DESC LIMIT 1
+                ) snap ON op.snapshot_id = snap.id;
+                """
+            )
+            active_symbols = {row[0] for row in cur.fetchall()}
+            
+            if not active_symbols:
+                return []
+            
+            # Query per ottenere l'ultima operazione per ogni symbol attivo
             cur.execute(
                 """
                 WITH ranked_ops AS (
@@ -714,7 +730,7 @@ def get_last_operations_by_symbol() -> List[BotOperation]:
                         ROW_NUMBER() OVER (PARTITION BY bo.symbol ORDER BY bo.created_at DESC) as rn
                     FROM bot_operations AS bo
                     LEFT JOIN ai_contexts AS ac ON bo.context_id = ac.id
-                    WHERE bo.symbol IS NOT NULL
+                    WHERE bo.symbol = ANY(%s)
                 )
                 SELECT
                     id,
@@ -729,7 +745,8 @@ def get_last_operations_by_symbol() -> List[BotOperation]:
                 FROM ranked_ops
                 WHERE rn = 1
                 ORDER BY symbol ASC;
-                """
+                """,
+                (list(active_symbols),)
             )
             rows = cur.fetchall()
 
