@@ -855,31 +855,57 @@ async def ui_current_indicators(
     ticker: Optional[str] = Query(None, description="Filtra per ticker")
 ) -> HTMLResponse:
     """Partial HTML per gli indicatori correnti."""
-    indicators = get_current_indicators(ticker=ticker)
-    
-    # Recupera lista ticker disponibili per il dropdown
-    available_tickers: List[str] = []
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT DISTINCT ticker 
-                FROM indicators_contexts 
-                WHERE ticker IS NOT NULL AND ticker != 'ETH'
-                ORDER BY ticker;
-                """
-            )
-            available_tickers = [row[0] for row in cur.fetchall()]
-    
-    return templates.TemplateResponse(
-        "partials/current_indicators.html",
-        {
-            "request": request,
-            "indicators": indicators,
-            "available_tickers": available_tickers,
-            "selected_ticker": ticker,
-        },
-    )
+    try:
+        indicators = get_current_indicators(ticker=ticker)
+        
+        # Recupera lista ticker disponibili per il dropdown
+        available_tickers: List[str] = []
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT DISTINCT ticker 
+                    FROM indicators_contexts 
+                    WHERE ticker IS NOT NULL AND ticker != 'ETH'
+                    ORDER BY ticker;
+                    """
+                )
+                available_tickers = [row[0] for row in cur.fetchall()]
+        
+        return templates.TemplateResponse(
+            "partials/current_indicators.html",
+            {
+                "request": request,
+                "indicators": indicators,
+                "available_tickers": available_tickers,
+                "selected_ticker": ticker,
+            },
+        )
+    except Exception as e:
+        # Gestione errori per evitare loader infinito
+        return templates.TemplateResponse(
+            "partials/current_indicators.html",
+            {
+                "request": request,
+                "indicators": CurrentIndicators(
+                    ticker=None,
+                    timestamp=None,
+                    price=None,
+                    ema9=None,
+                    ema20=None,
+                    ema21=None,
+                    supertrend=None,
+                    adx=None,
+                    macd=None,
+                    rsi_7=None,
+                    rsi_14=None,
+                    candlestick_patterns=None,
+                ),
+                "available_tickers": [],
+                "selected_ticker": ticker,
+                "error": str(e),
+            },
+        )
 
 
 @app.get("/ui/win-loss-metrics", response_class=HTMLResponse)
