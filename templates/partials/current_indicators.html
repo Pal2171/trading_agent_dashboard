@@ -133,37 +133,7 @@
         </div>
     </div>
 
-    <!-- Candlestick Patterns -->
-    {% if indicators.candlestick_patterns and indicators.candlestick_patterns.patterns %}
-    <div class="patterns-section">
-        <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem; color: #0f172a;">
-            📊 Candlestick Patterns
-        </h4>
-        <div class="patterns-interpretation">
-            <strong>{{ indicators.candlestick_patterns.interpretation }}</strong>
-        </div>
-        <div class="patterns-list">
-            {% for pattern in indicators.candlestick_patterns.patterns %}
-            <div class="pattern-item">
-                <span class="pattern-badge badge-{{ pattern.signal }}">
-                    {{ pattern.name }}
-                </span>
-                <span class="pattern-desc">{{ pattern.description }}</span>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% else %}
-    <!-- Messaggio quando non ci sono pattern -->
-    <div class="patterns-section" style="background: #f8fafc; border: 1px dashed #cbd5e1;">
-        <div style="text-align: center; padding: 1rem; color: #64748b;">
-            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📊</div>
-            <p style="margin: 0; font-size: 0.9rem; font-weight: 500;">Nessun pattern candlestick rilevato</p>
-            <p style="margin: 0.25rem 0 0 0; font-size: 0.8rem;">I pattern verranno visualizzati quando rilevati
-                dall'analisi tecnica.</p>
-        </div>
-    </div>
-    {% endif %}
+
 
     {% else %}
     <div style="text-align: center; padding: 2rem; color: #64748b;">

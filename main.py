@@ -110,13 +110,11 @@ class CurrentIndicators(BaseModel):
     price: Optional[float]
     ema9: Optional[float]
     ema20: Optional[float]
-    ema21: Optional[float]
     supertrend: Optional[str]
     adx: Optional[float]
     macd: Optional[float]
     rsi_7: Optional[float]
     rsi_14: Optional[float]
-    candlestick_patterns: Any
 
 
 class RiskMetrics(BaseModel):
@@ -473,13 +471,11 @@ def get_current_indicators(
                         price,
                         ema9,
                         ema20,
-                        ema21,
                         supertrend_1h,
                         adx,
                         macd,
                         rsi_7,
-                        rsi_14,
-                        candlestick_patterns
+                        rsi_14
                     FROM indicators_contexts
                     WHERE ticker = %s
                     ORDER BY ts DESC
@@ -498,13 +494,11 @@ def get_current_indicators(
                             price,
                             ema9,
                             ema20,
-                            ema21,
                             supertrend_1h,
                             adx,
                             macd,
                             rsi_7,
                             rsi_14,
-                            candlestick_patterns,
                             ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY ts DESC) as rn
                         FROM indicators_contexts
                         WHERE ticker IS NOT NULL
@@ -515,13 +509,11 @@ def get_current_indicators(
                         price,
                         ema9,
                         ema20,
-                        ema21,
                         supertrend_1h,
                         adx,
                         macd,
                         rsi_7,
-                        rsi_14,
-                        candlestick_patterns
+                        rsi_14
                     FROM ranked
                     WHERE rn = 1
                     ORDER BY ts DESC
@@ -537,13 +529,11 @@ def get_current_indicators(
             price=None,
             ema9=None,
             ema20=None,
-            ema21=None,
             supertrend=None,
             adx=None,
             macd=None,
             rsi_7=None,
             rsi_14=None,
-            candlestick_patterns=None,
         )
 
     return CurrentIndicators(
@@ -552,13 +542,11 @@ def get_current_indicators(
         price=float(row[2]) if row[2] else None,
         ema9=float(row[3]) if row[3] else None,
         ema20=float(row[4]) if row[4] else None,
-        ema21=float(row[5]) if row[5] else None,
-        supertrend=row[6],
-        adx=float(row[7]) if row[7] else None,
-        macd=float(row[8]) if row[8] else None,
-        rsi_7=float(row[9]) if row[9] else None,
-        rsi_14=float(row[10]) if row[10] else None,
-        candlestick_patterns=row[11],
+        supertrend=row[5],
+        adx=float(row[6]) if row[6] else None,
+        macd=float(row[7]) if row[7] else None,
+        rsi_7=float(row[8]) if row[8] else None,
+        rsi_14=float(row[9]) if row[9] else None,
     )
 
 
@@ -913,13 +901,11 @@ async def ui_current_indicators(
                     price=None,
                     ema9=None,
                     ema20=None,
-                    ema21=None,
                     supertrend=None,
                     adx=None,
                     macd=None,
                     rsi_7=None,
                     rsi_14=None,
-                    candlestick_patterns=None,
                 ),
                 "available_tickers": [],
                 "selected_ticker": ticker,
