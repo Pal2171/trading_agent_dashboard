@@ -488,8 +488,27 @@ def get_current_indicators(
                     (ticker,),
                 )
             else:
+                # Quando non specificato ticker, prendi il più recente tra tutti
                 cur.execute(
                     """
+                    WITH ranked AS (
+                        SELECT 
+                            ticker,
+                            ts,
+                            price,
+                            ema9,
+                            ema20,
+                            ema21,
+                            supertrend_1h,
+                            adx,
+                            macd,
+                            rsi_7,
+                            rsi_14,
+                            candlestick_patterns,
+                            ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY ts DESC) as rn
+                        FROM indicators_contexts
+                        WHERE ticker IS NOT NULL
+                    )
                     SELECT 
                         ticker,
                         ts,
@@ -503,7 +522,8 @@ def get_current_indicators(
                         rsi_7,
                         rsi_14,
                         candlestick_patterns
-                    FROM indicators_contexts
+                    FROM ranked
+                    WHERE rn = 1
                     ORDER BY ts DESC
                     LIMIT 1;
                     """
