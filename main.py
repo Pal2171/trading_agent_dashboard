@@ -132,6 +132,7 @@ class ClosedTrade(BaseModel):
     entry_price: float
     exit_price: Optional[float]
     pnl_usd: float
+    pnl_pct: Optional[float] = None
     open_time: datetime
     close_time: datetime
     motivation: Optional[str]
@@ -143,6 +144,38 @@ class WinLossMetrics(BaseModel):
     total_losses: int
     total_pnl_usd: float
     trades: List[ClosedTrade]
+
+
+# Nuovo modello per posizioni reali (v2)
+class RealPosition(BaseModel):
+    deal_id: str
+    symbol: str
+    direction: str
+    size: float
+    entry_price: float
+    mark_price: Optional[float]
+    pnl_usd: Optional[float]
+    pnl_pct: Optional[float]
+    stop_level: Optional[float]
+    limit_level: Optional[float]
+    leverage: Optional[int]
+    opened_at: Optional[datetime]
+    last_update: Optional[datetime]
+
+
+# Nuovo modello per storico trade (v2)
+class TradeHistoryItem(BaseModel):
+    deal_id: str
+    symbol: str
+    direction: str
+    size: float
+    entry_price: float
+    close_price: Optional[float]
+    pnl_usd: Optional[float]
+    pnl_pct: Optional[float]
+    opened_at: Optional[datetime]
+    closed_at: datetime
+    close_reason: Optional[str]
 
 
 # =====================
@@ -260,6 +293,113 @@ def get_open_positions() -> List[OpenPosition]:
             pnl_usd=float(row[7]) if row[7] is not None else None,
             leverage=row[8],
             snapshot_created_at=snapshot_created_at,
+        )
+        for row in rows
+    ]
+
+
+@app.get("/real-positions", response_model=List[RealPosition])
+def get_real_positions() -> List[RealPosition]:
+    """Restituisce le posizioni REALI attualmente aperte.
+    
+    Usa la tabella `real_positions` che contiene dati accurati
+    sincronizzati dal bot tramite UPSERT (nessun duplicato).
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    deal_id,
+                    symbol,
+                    direction,
+                    size,
+                    entry_price,
+                    mark_price,
+                    pnl_usd,
+                    pnl_pct,
+                    stop_level,
+                    limit_level,
+                    leverage,
+                    opened_at,
+                    last_update
+                FROM real_positions
+                ORDER BY opened_at DESC
+                """
+            )
+            rows = cur.fetchall()
+
+    return [
+        RealPosition(
+            deal_id=row[0],
+            symbol=row[1],
+            direction=row[2],
+            size=float(row[3]) if row[3] else 0,
+            entry_price=float(row[4]) if row[4] else None,
+            mark_price=float(row[5]) if row[5] else None,
+            pnl_usd=float(row[6]) if row[6] else None,
+            pnl_pct=float(row[7]) if row[7] else None,
+            stop_level=float(row[8]) if row[8] else None,
+            limit_level=float(row[9]) if row[9] else None,
+            leverage=row[10],
+            opened_at=row[11],
+            last_update=row[12],
+        )
+        for row in rows
+    ]
+
+
+@app.get("/trades-history", response_model=List[TradeHistoryItem])
+def get_trades_history(
+    limit: int = Query(
+        100,
+        ge=1,
+        le=1000,
+        description="Numero massimo di trade da restituire (default 100)",
+    ),
+) -> List[TradeHistoryItem]:
+    """Restituisce lo storico dei trade chiusi.
+    
+    Usa la tabella `trades_history` che contiene tutti i trade
+    completati con P/L calcolato e motivo di chiusura.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    deal_id,
+                    symbol,
+                    direction,
+                    size,
+                    entry_price,
+                    close_price,
+                    pnl_usd,
+                    pnl_pct,
+                    opened_at,
+                    closed_at,
+                    close_reason
+                FROM trades_history
+                ORDER BY closed_at DESC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            rows = cur.fetchall()
+
+    return [
+        TradeHistoryItem(
+            deal_id=row[0],
+            symbol=row[1],
+            direction=row[2],
+            size=float(row[3]) if row[3] else 0,
+            entry_price=float(row[4]) if row[4] else None,
+            close_price=float(row[5]) if row[5] else None,
+            pnl_usd=float(row[6]) if row[6] else None,
+            pnl_pct=float(row[7]) if row[7] else None,
+            opened_at=row[8],
+            closed_at=row[9],
+            close_reason=row[10],
         )
         for row in rows
     ]
@@ -802,9 +942,9 @@ async def ui_balance(request: Request) -> HTMLResponse:
 
 @app.get("/ui/open-positions", response_class=HTMLResponse)
 async def ui_open_positions(request: Request) -> HTMLResponse:
-    """Partial HTML con le posizioni aperte (ultimo snapshot)."""
+    """Partial HTML con le posizioni aperte (dalla tabella real_positions)."""
 
-    positions = get_open_positions()
+    positions = get_real_positions()
     return templates.TemplateResponse(
         "partials/open_positions_table.html",
         {"request": request, "positions": positions},

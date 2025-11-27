@@ -2,8 +2,8 @@
 <!-- Summary Stats -->
 <div class="positions-summary">
     {% set total_pnl = positions | selectattr('pnl_usd', 'ne', None) | map(attribute='pnl_usd') | sum %}
-    {% set long_count = positions | selectattr('side', 'eq', 'long') | list | length %}
-    {% set short_count = positions | selectattr('side', 'eq', 'short') | list | length %}
+    {% set long_count = positions | selectattr('direction', 'eq', 'BUY') | list | length %}
+    {% set short_count = positions | selectattr('direction', 'eq', 'SELL') | list | length %}
     
     <div class="summary-item">
         <span class="summary-label">Totale Posizioni</span>
@@ -32,7 +32,7 @@
                 <th>Size</th>
                 <th>Entry Price</th>
                 <th>Mark Price</th>
-                <th>Variazione %</th>
+                <th>P&L %</th>
                 <th>Leva</th>
                 <th>PnL (USD)</th>
                 <th>Aggiornato</th>
@@ -40,32 +40,43 @@
         </thead>
         <tbody>
             {% for pos in positions %}
-            {% set price_change_pct = ((pos.mark_price - pos.entry_price) / pos.entry_price * 100) if (pos.mark_price and pos.entry_price and pos.entry_price > 0) else None %}
             <tr>
                 <td><strong style="font-size: 0.85rem;">{{ pos.symbol }}</strong></td>
                 <td>
-                    {% if pos.side %}
-                    <span class="badge {% if pos.side|lower == 'long' %}badge-long{% elif pos.side|lower == 'short' %}badge-short{% endif %}">
-                        {% if pos.side|lower == 'long' %}▲{% else %}▼{% endif %} {{ pos.side|upper }}
+                    {% if pos.direction %}
+                    <span class="badge {% if pos.direction|upper == 'BUY' %}badge-long{% elif pos.direction|upper == 'SELL' %}badge-short{% endif %}">
+                        {% if pos.direction|upper == 'BUY' %}▲ LONG{% else %}▼ SHORT{% endif %}
                     </span>
                     {% else %}
                     -
                     {% endif %}
                 </td>
                 <td style="font-family: monospace;">{{ pos.size | format_decimal(4) }}</td>
-                <td style="font-family: monospace;">${{ '%.2f' | format(pos.entry_price) if pos.entry_price else '-' }}</td>
-                <td style="font-family: monospace; font-weight: 600;">${{ '%.2f' | format(pos.mark_price) if pos.mark_price else '-' }}</td>
+                <td style="font-family: monospace;">
+                    {% if pos.symbol == 'EUR/USD' %}
+                    ${{ '%.5f' | format(pos.entry_price) if pos.entry_price else '-' }}
+                    {% else %}
+                    ${{ '%.2f' | format(pos.entry_price) if pos.entry_price else '-' }}
+                    {% endif %}
+                </td>
+                <td style="font-family: monospace; font-weight: 600;">
+                    {% if pos.symbol == 'EUR/USD' %}
+                    ${{ '%.5f' | format(pos.mark_price) if pos.mark_price else '-' }}
+                    {% else %}
+                    ${{ '%.2f' | format(pos.mark_price) if pos.mark_price else '-' }}
+                    {% endif %}
+                </td>
                 <td>
-                    {% if price_change_pct is not none %}
-                    <span class="{% if price_change_pct >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-weight: 600;">
-                        {{ '{:+.2f}'.format(price_change_pct) }}%
+                    {% if pos.pnl_pct is not none %}
+                    <span class="{% if pos.pnl_pct >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-weight: 600;">
+                        {{ '{:+.2f}'.format(pos.pnl_pct) }}%
                     </span>
                     {% else %}
                     -
                     {% endif %}
                 </td>
                 <td>
-                    <span class="leverage-badge">{{ pos.leverage or '1x' }}</span>
+                    <span class="leverage-badge">{{ pos.leverage or '1' }}x</span>
                 </td>
                 <td>
                     {% if pos.pnl_usd is not none %}
@@ -76,7 +87,7 @@
                     -
                     {% endif %}
                 </td>
-                <td class="text-muted" style="font-size: 0.85rem;">{{ pos.snapshot_created_at.strftime('%d/%m %H:%M') }}</td>
+                <td class="text-muted" style="font-size: 0.85rem;">{{ pos.last_update.strftime('%d/%m %H:%M') if pos.last_update else '-' }}</td>
             </tr>
             {% endfor %}
         </tbody>
