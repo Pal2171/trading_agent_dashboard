@@ -840,27 +840,14 @@ def calculate_closed_trades_logic() -> WinLossMetrics:
 
 @app.get("/last-operations-by-symbol", response_model=List[BotOperation])
 def get_last_operations_by_symbol() -> List[BotOperation]:
-    """Restituisce l'ultima operazione (incluso HOLD) solo per symbol con posizioni aperte."""
+    """Restituisce l'ultima operazione (incluso HOLD) per ogni crypto monitorata."""
+
+    # Crypto monitorate dal bot
+    MONITORED_SYMBOLS = ['BTC', 'ETH', 'SOL']
 
     with get_connection() as conn:
         with conn.cursor() as cur:
-            # Prima ottieni i symbol con posizioni aperte dall'ultimo snapshot
-            cur.execute(
-                """
-                SELECT DISTINCT op.symbol
-                FROM open_positions op
-                INNER JOIN (
-                    SELECT id FROM account_snapshots
-                    ORDER BY created_at DESC LIMIT 1
-                ) snap ON op.snapshot_id = snap.id;
-                """
-            )
-            active_symbols = {row[0] for row in cur.fetchall()}
-            
-            if not active_symbols:
-                return []
-            
-            # Query per ottenere l'ultima operazione per ogni symbol attivo
+            # Query per ottenere l'ultima operazione per ogni symbol monitorato
             cur.execute(
                 """
                 WITH ranked_ops AS (
@@ -893,7 +880,7 @@ def get_last_operations_by_symbol() -> List[BotOperation]:
                 WHERE rn = 1
                 ORDER BY symbol ASC;
                 """,
-                (list(active_symbols),)
+                (MONITORED_SYMBOLS,)
             )
             rows = cur.fetchall()
 
