@@ -119,6 +119,18 @@ class CurrentIndicators(BaseModel):
 
 class RiskMetrics(BaseModel):
     total_exposure_usd: float
+
+
+class SentimentData(BaseModel):
+    value: Optional[int]
+    classification: Optional[str]
+    timestamp: Optional[datetime]
+
+
+class NewsItem(BaseModel):
+    title: str
+    source: Optional[str]
+    timestamp: Optional[datetime]
     total_positions: int
     long_positions: int
     short_positions: int
@@ -1078,6 +1090,95 @@ async def ui_win_loss_metrics(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         "partials/win_loss_metrics.html",
         {"request": request, "metrics": metrics},
+    )
+
+
+@app.get("/ui/sentiment-news", response_class=HTMLResponse)
+async def ui_sentiment_news(request: Request) -> HTMLResponse:
+    """Partial HTML per Sentiment e ultime News."""
+    
+    sentiment_data = None
+    news_items = []
+    
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            # Recupera l'ultimo sentiment
+            cur.execute(
+                """
+                SELECT value, classification, sentiment_timestamp
+                FROM sentiment_contexts
+                ORDER BY id DESC
+                LIMIT 1;
+                """
+            )
+            row = cur.fetchone()
+            if row:
+                # sentiment_timestamp è un BIGINT (unix timestamp)
+                ts = None
+                if row[2]:
+                    try:
+                        ts = to_local_time(datetime.utcfromtimestamp(row[2]))
+                    except:
+                        pass
+                sentiment_data = SentimentData(
+                    value=row[0],
+                    classification=row[1],
+                    timestamp=ts
+                )
+            
+            # Recupera le ultime 5 news (dal campo news_text che contiene testo formattato)
+            cur.execute(
+                """
+                SELECT nc.news_text, ac.created_at
+                FROM news_contexts nc
+                JOIN ai_contexts ac ON nc.context_id = ac.id
+                ORDER BY nc.id DESC
+                LIMIT 1;
+                """
+            )
+            news_row = cur.fetchone()
+            if news_row and news_row[0]:
+                # Il news_text contiene testo formattato, lo parsiamo per estrarre titoli
+                news_text = news_row[0]
+                timestamp = to_local_time(news_row[1]) if news_row[1] else None
+                
+                # Estrai linee che sembrano titoli di news (ignora linee vuote e separatori)
+                lines = news_text.strip().split('\n')
+                for line in lines:
+                    line = line.strip()
+                    # Salta linee vuote, separatori, e header
+                    if not line or line.startswith('---') or line.startswith('==='):
+                        continue
+                    if line.lower().startswith('here are') or line.lower().startswith('latest'):
+                        continue
+                    if len(line) > 15:  # Solo linee abbastanza lunghe
+                        # Cerca di estrarre la fonte se presente (es. "[CoinDesk]" o "Source:")
+                        source = "Crypto"
+                        if line.startswith('[') and ']' in line:
+                            source = line[1:line.index(']')]
+                            line = line[line.index(']')+1:].strip()
+                        elif ':' in line[:30]:
+                            parts = line.split(':', 1)
+                            if len(parts[0]) < 20:
+                                source = parts[0]
+                                line = parts[1].strip()
+                        
+                        news_items.append(NewsItem(
+                            title=line[:200],  # Tronca a 200 char
+                            source=source,
+                            timestamp=timestamp
+                        ))
+                        
+                        if len(news_items) >= 5:
+                            break
+    
+    return templates.TemplateResponse(
+        "partials/sentiment_news.html",
+        {
+            "request": request,
+            "sentiment": sentiment_data,
+            "news_items": news_items,
+        },
     )
 
 

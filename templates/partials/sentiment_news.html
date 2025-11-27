@@ -1,0 +1,176 @@
+<div class="sentiment-news-container">
+    <!-- Sentiment Section -->
+    <div class="section-header">
+        <h3 style="margin: 0; font-size: 1rem;">📊 Sentiment Crypto</h3>
+    </div>
+    
+    {% if sentiment %}
+    <div class="sentiment-box">
+        <div class="sentiment-main">
+            <span class="sentiment-value 
+                {% if sentiment.classification == 'Extreme Greed' or sentiment.classification == 'Greed' %}
+                    sentiment-greed
+                {% elif sentiment.classification == 'Extreme Fear' or sentiment.classification == 'Fear' %}
+                    sentiment-fear
+                {% else %}
+                    sentiment-neutral
+                {% endif %}">
+                {{ sentiment.value }}
+            </span>
+            <span class="sentiment-label">{{ sentiment.classification or 'N/A' }}</span>
+        </div>
+        {% if sentiment.timestamp %}
+        <div class="sentiment-time text-muted">
+            Aggiornato: {{ sentiment.timestamp.strftime('%d/%m/%Y %H:%M') }}
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="no-data">
+        <p>Nessun dato sentiment disponibile.</p>
+    </div>
+    {% endif %}
+
+    <!-- News Section -->
+    <div class="section-header" style="margin-top: 1.25rem;">
+        <h3 style="margin: 0; font-size: 1rem;">📰 Ultime News Crypto</h3>
+    </div>
+    
+    {% if news_items and news_items|length > 0 %}
+    <div class="news-list">
+        {% for news in news_items[:5] %}
+        <div class="news-item">
+            <div class="news-source">
+                <span class="news-badge">{{ news.source or 'News' }}</span>
+                {% if news.timestamp %}
+                <span class="news-time">{{ news.timestamp.strftime('%d/%m %H:%M') }}</span>
+                {% endif %}
+            </div>
+            <div class="news-title">{{ news.title }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-data">
+        <p>Nessuna news recente disponibile.</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .sentiment-news-container {
+        background: #ffffff;
+    }
+
+    .section-header {
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 1rem;
+    }
+
+    .sentiment-box {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 1rem;
+    }
+
+    .sentiment-main {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .sentiment-value {
+        font-size: 2rem;
+        font-weight: 700;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+    }
+
+    .sentiment-greed {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .sentiment-fear {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .sentiment-neutral {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .sentiment-label {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    .sentiment-time {
+        font-size: 0.8rem;
+    }
+
+    .news-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .news-item {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+    }
+
+    .news-source {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .news-badge {
+        background: #3b82f6;
+        color: white;
+        padding: 0.2rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .news-time {
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+
+    .news-title {
+        font-size: 0.9rem;
+        color: #0f172a;
+        line-height: 1.4;
+    }
+
+    .no-data {
+        text-align: center;
+        padding: 1.5rem;
+        color: #64748b;
+        background: #f8fafc;
+        border: 1px dashed #e2e8f0;
+        border-radius: 0.5rem;
+    }
+
+    .no-data p {
+        margin: 0;
+    }
+
+    .text-muted {
+        color: #64748b;
+    }
+</style>
