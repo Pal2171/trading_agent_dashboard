@@ -878,7 +878,7 @@ def get_last_operations_by_symbol() -> List[BotOperation]:
                     system_prompt
                 FROM ranked_ops
                 WHERE rn = 1
-                ORDER BY symbol ASC;
+                ORDER BY created_at DESC;
                 """,
                 (MONITORED_SYMBOLS,)
             )
