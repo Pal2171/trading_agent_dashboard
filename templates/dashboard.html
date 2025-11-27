@@ -49,18 +49,7 @@
         </div>
     </article>
 
-    <!-- 4. Sentiment & News -->
-    <article class="card">
-        <div style="margin-bottom: 1rem;">
-            <h2>📈 Sentiment & News</h2>
-            <p class="card-subtitle">Fear & Greed Index e ultime notizie crypto.</p>
-        </div>
-        <div id="sentiment-news-panel" hx-get="/ui/sentiment-news" hx-trigger="load, every 60s">
-            <div aria-busy="true">Caricamento sentiment e news...</div>
-        </div>
-    </article>
-
-    <!-- 5. Open Positions Table -->
+    <!-- 4. Open Positions Table -->
     <article class="card">
         <div class="flex-between" style="margin-bottom: 1rem;">
             <div>
@@ -70,6 +59,17 @@
         </div>
         <div id="open-positions-row" hx-get="/ui/open-positions" hx-trigger="load, every 30s">
             <div aria-busy="true">Caricamento posizioni...</div>
+        </div>
+    </article>
+
+    <!-- 5. Sentiment & News -->
+    <article class="card">
+        <div style="margin-bottom: 1rem;">
+            <h2>📈 Sentiment & News</h2>
+            <p class="card-subtitle">Fear & Greed Index e ultime notizie crypto.</p>
+        </div>
+        <div id="sentiment-news-panel" hx-get="/ui/sentiment-news" hx-trigger="load, every 60s">
+            <div aria-busy="true">Caricamento sentiment e news...</div>
         </div>
     </article>
 
