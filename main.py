@@ -129,13 +129,8 @@ class SentimentData(BaseModel):
 
 class NewsItem(BaseModel):
     title: str
-    source: Optional[str]
-    timestamp: Optional[datetime]
-    total_positions: int
-    long_positions: int
-    short_positions: int
-    avg_leverage: Optional[float]
-    largest_position_pct: Optional[float]
+    source: Optional[str] = None
+    timestamp: Optional[datetime] = None
 
 
 class ClosedTrade(BaseModel):
